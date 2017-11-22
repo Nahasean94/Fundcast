@@ -3,8 +3,7 @@ const Router =require( 'koa-router')
 const serve = require('koa-static')
 import React from 'react'
 import {renderToString} from 'react-dom/server'
-import Menu from './src/components/menu'
-import data  from './src/data/recipes'
+
 
 const app = new Koa()
 const router = new Router()

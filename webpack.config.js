@@ -5,9 +5,10 @@ const path=require('path')
 module.exports = {
     entry: "./src/index-client.js",
     output: {
-        path: path.resolve(__dirname,'public'),
+        path: path.resolve(__dirname,'public','js'),
         filename: "bundle.js"
     },
+    watch: true,
     module: {
         rules: [
             {
@@ -15,7 +16,7 @@ module.exports = {
                 exclude: /(node_modules)/,
                 loader: 'babel-loader',
                 query: {
-                    presets: ['env', 'stage-0', 'react']
+                    presets: ['env', 'stage-1', 'react']
                 }
             }
         ]
