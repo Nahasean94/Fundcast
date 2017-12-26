@@ -89,50 +89,7 @@ router.get('/logout', async ctx => {
     ctx.session = null
     ctx.redirect('/')
 })
-// router.get('/profile', async ctx => {
-//     //TODO find a better way to handle this. Avoid querying the db again
-//     if (ctx.session.user_id === undefined) {
-//         //  TODO handle this situation
-//         ctx.redirect('/')
-//     }
-//     else {
-//         const query = Person.findOne({
-//             '_id': ctx.session.user_id
-//         })
-//         query.select('first_name last_name username email cellphone password birthday friends date_joined profile_picture posts uploads')
-//         await query.exec().then(async function (profile) {
-//             await findTwinpals(ctx, profile.birthday).then(async function (twinpals) {
-//                     if (twinpals.length < 1) {
-//                         twinpals = 'you have no twinpals'
-//                     }
-//                     const whole_profile = ['first_name', 'last_name', 'username', 'email', 'cellphone', 'password', 'birthday', 'friends', 'date_joined', 'profile_picture']
-//                     let complete = []
-//                     whole_profile.forEach(prop => {
-//                         if (profile[prop] !== undefined) {
-//                             complete.push(profile[prop])
-//                         }
-//                     })
-//                     const profile_progress = (complete.length / whole_profile.length) * 100
-//                     profile.twinpals = twinpals
-//                     // let newpic = profile.profile_picture
-//                     profile.profile_picture = '/uploads/' + profile.profile_picture
-//                     if (profile.posts.length > 0) {
-//                         const posts = await findPosts(ctx.session.user_id)
-//                         // posts.forEach(async post => {
-//                         //     const comments = findComments(post._id)
-//                         //     if (comments.length > 0) {
-//                         //         post['comments'] = comments
-//                         //     }
-//                         // })
-//                         profile.status_posts = posts
-//
-//                     }
-//                     ctx.render('profile', {profile: profile, progress: profile_progress})
-//                 }
-//             )
-//         })
-//     }
-// })
+
 router.get('/users/:email', async ctx => {
     return await Person.findOne({email: ctx.params.email}).exec().then(function (user) {
         ctx.body = user
@@ -229,6 +186,7 @@ router.post('/profile_pic', koaBody, authenticate, async ctx => {
     const upload = ctx.request.body
     const pic = upload.files.profile_picture
     if (pic !== undefined) {
+        console.log("profiling")
         const path = pic.path
         const uploader = ctx.currentUser._id
         const arraypath = path.split('\\')
@@ -670,20 +628,35 @@ router.get('/posts/edit/:id', async ctx => {
     })
 })
 //update a post
-router.post('/posts/edit', koaBody, async ctx => {
-    await updatePost(ctx.request.body).then(function (post) {
-        ctx.redirect('/profile')
-    })
+router.post('/posts/edit', koaBody, authenticate, async ctx => {
+    console.log(ctx.request.body.fields.body)
+    if (ctx.request.body.fields.body !== '') {
+
+        await updatePost(ctx.request.body.fields).then(async function (post) {
+            await post.populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').execPopulate().then(async function (pos) {
+                if (pos) {
+                    ctx.body = pos
+                }
+            }).catch(function (err) {
+                ctx.status = 500
+                ctx.body = err
+            })
+        }).catch(function (err) {
+            ctx.status = 500
+            ctx.body = err
+        })
+    }
 })
 
 //update the post in the database
 async function updatePost(post) {
     return await Post.findOneAndUpdate({
-        _id: post.post_id
+        _id: post.id
     }, {
         body: post.body,
-        status: 'edited'
-    }).exec()
+        status: 'edited',
+        timestamp: new Date()
+    }, {new: true}).exec()
 }
 
 //display the comment form
@@ -785,19 +758,23 @@ router.get('/profile/uploads/:id', async ctx => {
     })
 })
 //delete posts
-router.get('/posts/delete/:id', async ctx => {
+router.get('/posts/delete/:id', authenticate, async ctx => {
     await deletePost(ctx, ctx.params.id).then(function (deleted) {
-        ctx.redirect('/profile')
+        if (deleted) {
+            ctx.body = deleted
+        }
+    }).catch(function (err) {
+        ctx.status = 500
+        ctx.body = err
     })
 })
 //TODO notify anybody who had shared/commented on this post that it was deleted
 //delete post from database
 async function deletePost(ctx, post_id) {
-    return Comment.remove({post: post_id}).exec().then(async function (deleted) {
-        await Person.findOneAndUpdate({_id: ctx.session.user_id}, {$pull: {posts: post_id}}).exec().then(async function (removed) {
-            await Post.findByIdAndRemove({_id: post_id}).exec()
-        })
-    })
+     Comment.remove({post: post_id}).exec()
+     Person.findOneAndUpdate({_id: ctx.currentUser._id}, {$pull: {posts: post_id}}).exec()
+    return await Post.findByIdAndRemove({_id: post_id}).exec()
+
 }
 
 //delete the upload made by the user
