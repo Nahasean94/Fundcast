@@ -16,7 +16,7 @@ const config = require('./config')
 const Validator = require('validator')
 const isEmpty = require('lodash/isEmpty')
 const bcrypt = require('bcrypt')
-const {authenticate, authenticateAndFetchPosts} = require('./middleware/authenticate')
+const {authenticate} = require('./middleware/authenticate')
 
 // const serve=require('koa-static')
 const {Person, Group, Page, Comment, Admin, Upload, Post} = require('./../databases/Schemas')
@@ -45,7 +45,7 @@ const pug = new Pug({
 })
 // app.use(serve({rootDir:'public'}))
 router.get('/', async ctx => {
-    ctx.body = await Person.find()
+    ctx.render('index')
 })
 router.get('/profile', authenticate, async ctx => {
     delete ctx.currentUser.password
@@ -59,7 +59,7 @@ router.get('/profile', authenticate, async ctx => {
 router.post('/login', koaBody, async ctx => {
     const {email, password} = ctx.request.body
     // const password_digest = bcrypt.hashSync(password, 10)
-    await Person.findOne({email: email}).exec().then(function (person) {
+    await Person.findOne({email: email}).select('_id email username birthday password').exec().then(function (person) {
         if (person) {
             if (bcrypt.compareSync(password, person.password)) {
                 ctx.body = {
@@ -81,7 +81,7 @@ router.post('/login', koaBody, async ctx => {
         }
     }).catch(function (err) {
         ctx.status = 400
-        ctx.body = err
+        ctx.body = {errors: {form:err}}
     })
 })
 router.get('/logout', async ctx => {
@@ -718,9 +718,9 @@ async function updateProfile(ctx, profile) {
         last_name: profile.last_name,
         username: profile.username,
         email: profile.email,
-        cellphone: profile.cellphone,
+        // cellphone: profile.cellphone,
         birthday: profile.birthday,
-        location: profile.location
+        // location: profile.location
     }).exec()
 }
 
@@ -827,7 +827,7 @@ router.get('/twinpal/users/:id', async ctx => {
     })
 })
 app.use(router.routes())
-// pug.use(app)
+pug.use(app)
 app.use(cors())
 app.use(session(CONFIG, app))
 // pug.use(app)

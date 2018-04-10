@@ -21,7 +21,7 @@ module.exports ={
                 ctx.body = {error: 'Failed to authenticate'}
             }
                 else {
-                await Person.findById(decoded.id).exec().then(async function (user) {
+                await Person.findById(decoded.id).select('_id username birthday profile_picture first_name last_name email').exec().then(async function (user) {
                     if (!user) {
                         ctx.status = 404
                         ctx.body = {error: 'No such user'}
