@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken')
 const config = require('../config')
-const {Person} = require('../../databases/Schemas')
+const {Person} = require('../../databases/schemas')
 const mongoose = require('mongoose')
 
 

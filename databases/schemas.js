@@ -9,6 +9,7 @@ const PersonSchema = new Schema({
     username: String,
     email: {
         type: String,
+        unique:[true,"email already exists"],
         required: [true, 'Email is a required field']
     },
     cellphone: {

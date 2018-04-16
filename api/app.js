@@ -17,9 +17,9 @@ const Validator = require('validator')
 const isEmpty = require('lodash/isEmpty')
 const bcrypt = require('bcrypt')
 const {authenticate} = require('./middleware/authenticate')
-
+const queries = require('./../databases/queries')
 // const serve=require('koa-static')
-const {Person, Group, Page, Comment, Admin, Upload, Post} = require('./../databases/Schemas')
+const {Person, Group, Page, Comment, Admin, Upload, Post} = require('../databases/schemas')
 const koaBody = new KoaBody({
     multipart: true,
     formidable: {uploadDir: './public/uploads', keepExtensions: true}
@@ -44,9 +44,9 @@ const pug = new Pug({
     viewPath: './public'
 })
 // app.use(serve({rootDir:'public'}))
-router.get('/', async ctx => {
-    ctx.render('index')
-})
+// router.get('/', async ctx => {
+//     ctx.render('index')
+// })
 router.get('/profile', authenticate, async ctx => {
     delete ctx.currentUser.password
     ctx.body = ctx.currentUser
@@ -81,7 +81,7 @@ router.post('/login', koaBody, async ctx => {
         }
     }).catch(function (err) {
         ctx.status = 400
-        ctx.body = {errors: {form:err}}
+        ctx.body = {errors: {form: err}}
     })
 })
 router.get('/logout', async ctx => {
@@ -168,7 +168,7 @@ router.get('/posts/:id', authenticate, async ctx => {
 
 //display the profile of the twinpal
 // router.get('/twinpal/:id', async ctx => {
-//     await viewTwinpal(ctx.params.id).then(async function (profile) {
+//     await queries.viewTwinpal(ctx.params.id).then(async function (profile) {
 //         if (profile.posts.length > 0) {
 //             await findPosts(profile._id).then(function (posts) {
 //                 profile.twinpal_posts = posts
@@ -246,12 +246,6 @@ router.get('/twinpals/:id', authenticate, async ctx => {
         ctx.body = err
     })
 })
-
-async function viewTwinpal(id) {
-    return Person.findOne({
-        '_id': id
-    }).select('first_name last_name profile_picture posts').exec()
-}
 
 /**
  * Handle the signup post request and register a new user
@@ -427,7 +421,7 @@ router.post('/posts/new', koaBody, authenticate, async ctx => {
         const uploader = ctx.currentUser._id
         const arraypath = path.split('\\')
         const filepath = `${uploader}/${arraypath[arraypath.length - 1]}`
-        await storeUpload(ctx, filepath).then(async function (upload) {
+        await queries.storeUpload(ctx, filepath).then(async function (upload) {
             const newPath = `./public/uploads/${filepath}`
             if (!fs.existsSync(`./public/uploads/${uploader}`))
                 fs.mkdirSync(`./public/uploads/${uploader}`)
@@ -511,33 +505,10 @@ router.post('/posts/new', koaBody, authenticate, async ctx => {
 
 })
 
-//create new post
-async function createNewPost(ctx, post) {
-    const newPost = new Post({
-        body: post.body,
-        author: ctx.currentUser.id,
-        status: 'original'
-    })
-    try {
-        return await newPost.save().then(async function (post) {
-            return await Person.findOneAndUpdate({
-                _id: ctx.currentUser.id
-            }, {$push: {posts: post._id}}).exec()
-        }).catch(function (err) {
-            ctx.status = 500
-            ctx.body = err
-            return ctx
-        })
-    }
-    catch (err) {
-        ctx.status = 500
-        ctx.body = err
-    }
-}
 
 //handle liking of posts
 router.post('/posts/like', koaBody, authenticate, async ctx => {
-    await likePost(ctx, ctx.request.body.postId).then(async function (post) {
+    await queries.likePost(ctx, ctx.request.body.postId).then(async function (post) {
         await post.populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').execPopulate().then(function (pos) {
             ctx.status = 200
             ctx.body = pos
@@ -548,27 +519,9 @@ router.post('/posts/like', koaBody, authenticate, async ctx => {
     })
 })
 
-//update the database on the liked post
-async function likePost(ctx, id) {
-    //TODO provide feedback on the front end
-    return await Post.findOneAndUpdate({
-        _id: id,
-        author: {$ne: ctx.currentUser.id},
-        'likes.liked_by': {$ne: ctx.currentUser.id}
-
-    }, {
-        $push: {
-            likes: {
-                liked_by: ctx.currentUser.id,
-                timestamp: new Date()
-            }
-        }
-    }, {new: true}).exec()
-}
-
 //handle liking of posts
 router.post('/comments/like', koaBody, authenticate, async ctx => {
-    await likeComment(ctx, ctx.request.body.commentId).then(function (comment) {
+    await queries.likeComment(ctx, ctx.request.body.commentId).then(function (comment) {
         ctx.status = 200
         ctx.body = comment
     }).catch(function (err) {
@@ -577,26 +530,10 @@ router.post('/comments/like', koaBody, authenticate, async ctx => {
     })
 })
 
-//update the database on the liked post
-async function likeComment(ctx, id) {
-    //TODO provide feedback on the front end
-    return await Comment.findOneAndUpdate({
-        _id: id,
-        author: {$ne: ctx.currentUser.id},
-        'likes.liked_by': {$ne: ctx.currentUser.id}
-
-    }, {
-        $push: {
-            likes: {
-                liked_by: ctx.currentUser.id
-            }
-        }
-    }, {new: true}).exec()
-}
 
 //handle unliking of posts
 router.post('/posts/unlike', koaBody, authenticate, async ctx => {
-    await unlikePost(ctx, ctx.request.body.postId).then(async function (post) {
+    await queries.unlikePost(ctx, ctx.request.body.postId).then(async function (post) {
         await post.populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').execPopulate().then(function (pos) {
             ctx.status = 200
             ctx.body = pos
@@ -607,19 +544,6 @@ router.post('/posts/unlike', koaBody, authenticate, async ctx => {
     })
 })
 
-//update the database on the liked post
-async function unlikePost(ctx, id) {
-    //TODO provide feedback on the front end
-    return await Post.findOneAndUpdate({
-        _id: id
-    }, {
-        $pull: {
-            likes: {
-                liked_by: ctx.currentUser.id
-            }
-        }
-    }, {new: true}).exec()
-}
 
 //editing a post
 router.get('/posts/edit/:id', async ctx => {
@@ -632,7 +556,7 @@ router.post('/posts/edit', koaBody, authenticate, async ctx => {
     console.log(ctx.request.body.fields.body)
     if (ctx.request.body.fields.body !== '') {
 
-        await updatePost(ctx.request.body.fields).then(async function (post) {
+        await queries.updatePost(ctx.request.body.fields).then(async function (post) {
             await post.populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').execPopulate().then(async function (pos) {
                 if (pos) {
                     ctx.body = pos
@@ -648,16 +572,6 @@ router.post('/posts/edit', koaBody, authenticate, async ctx => {
     }
 })
 
-//update the post in the database
-async function updatePost(post) {
-    return await Post.findOneAndUpdate({
-        _id: post.id
-    }, {
-        body: post.body,
-        status: 'edited',
-        timestamp: new Date()
-    }, {new: true}).exec()
-}
 
 //display the comment form
 router.get('/posts/comments/:id', async ctx => {
@@ -677,24 +591,13 @@ router.get('/posts/comments/:id', async ctx => {
 })
 //insert a comment on a post
 router.post('/posts/comment/', koaBody, authenticate, async ctx => {
-    await storeComment(ctx, ctx.request.body).then(function (comment) {
+    await queries.storeComment(ctx, ctx.request.body).then(function (comment) {
         ctx.body = comment
     }).catch(function (err) {
         ctx.status = 500
         ctx.body = err
     })
 })
-
-//store the comment in the database
-async function storeComment(ctx, comment) {
-    //TODO look for a way to only receive data from one form
-    return await new Comment({
-        author: ctx.currentUser.id,
-        body: comment.comment,
-        post: comment.postId,
-        timestamp: new Date()
-    }).save()
-}
 
 //edit profile details
 router.get('/profile/edit/:id', async ctx => {
@@ -704,25 +607,12 @@ router.get('/profile/edit/:id', async ctx => {
 })
 //receive update information from the update form
 router.post('/profile/edit', koaBody, authenticate, async ctx => {
-    await updateProfile(ctx, ctx.request.body).then(function (profile) {
+    await queries.updateProfile(ctx, ctx.request.body).then(function (profile) {
         ctx.status = 200
         ctx.body = 'success'
     })
 })
 
-//store the updated information to the db
-async function updateProfile(ctx, profile) {
-    //TODO record the date profile was updated
-    return await Person.findOneAndUpdate({_id: ctx.currentUser._id}, {
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        username: profile.username,
-        email: profile.email,
-        // cellphone: profile.cellphone,
-        birthday: profile.birthday,
-        // location: profile.location
-    }).exec()
-}
 
 //handle upload of files
 router.post('/profile/upload', koaBody, async ctx => {
@@ -742,14 +632,6 @@ router.post('/profile/upload', koaBody, async ctx => {
     })
 })
 
-//store uplaods
-async function storeUpload(ctx, filepath) {
-    return await new Upload({
-        path: filepath,
-        uploader: ctx.currentUser._id,
-        timestamp: new Date()
-    }).save()
-}
 
 //get the uploads made by the user
 router.get('/profile/uploads/:id', async ctx => {
@@ -759,7 +641,7 @@ router.get('/profile/uploads/:id', async ctx => {
 })
 //delete posts
 router.get('/posts/delete/:id', authenticate, async ctx => {
-    await deletePost(ctx, ctx.params.id).then(function (deleted) {
+    await queries.deletePost(ctx, ctx.params.id).then(function (deleted) {
         if (deleted) {
             ctx.body = deleted
         }
@@ -768,32 +650,14 @@ router.get('/posts/delete/:id', authenticate, async ctx => {
         ctx.body = err
     })
 })
-//TODO notify anybody who had shared/commented on this post that it was deleted
-//delete post from database
-async function deletePost(ctx, post_id) {
-     Comment.remove({post: post_id}).exec()
-     Person.findOneAndUpdate({_id: ctx.currentUser._id}, {$pull: {posts: post_id}}).exec()
-    return await Post.findByIdAndRemove({_id: post_id}).exec()
 
-}
 
 //delete the upload made by the user
 router.get('/uploads/delete/:id', async ctx => {
-    await deleteUpload(ctx, ctx.params.id).then(async function (deleted) {
+    await queries.deleteUpload(ctx, ctx.params.id).then(async function (deleted) {
         ctx.redirect(`/profile/uploads/${ctx.session.user_id}`)
     })
 })
-
-//delete the upload from the database and file system
-async function deleteUpload(ctx, upload_id) {
-    return await Person.findOneAndUpdate({_id: ctx.session.user_id}, {$pull: {uploads: upload_id}}).exec().then(async function (pulled) {
-        await Upload.findByIdAndRemove({_id: upload_id}).exec().then(async function (removed) {
-            fs.unlink(`./public/uploads/${removed.path}`, () => {
-                //TODO notify the user that its deleted
-            })
-        })
-    })
-}
 
 //remove profile picture
 router.get('/profile/remove_profile_picture', async ctx => {
@@ -806,17 +670,12 @@ router.get('/profile/remove_profile_picture', async ctx => {
 //delete account
 router.get('/post/delete_account', async ctx => {
     // ctx.body='ffghfg'
-    await deleteAccount(ctx).then(function (deleted) {
+    await queries.deleteAccount(ctx).then(function (deleted) {
         ctx.session = null
         ctx.redirect('/')
     })
 })
 
-//delete account in database
-async function deleteAccount(ctx) {
-    //TODO make all the content uploaded by these people to be anonymous
-    return await Person.findByIdAndRemove({_id: ctx.session.user_id}).exec()
-}
 
 router.get('/twinpal/users/:id', async ctx => {
     await Person.findById(ctx.params.id).select('_id username profile_picture').exec().then(function (person) {
