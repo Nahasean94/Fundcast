@@ -44,9 +44,9 @@ const pug = new Pug({
     viewPath: './public'
 })
 // app.use(serve({rootDir:'public'}))
-// router.get('/', async ctx => {
-//     ctx.render('index')
-// })
+router.get('/', async ctx => {
+    ctx.render('index')
+})
 router.get('/profile', authenticate, async ctx => {
     delete ctx.currentUser.password
     ctx.body = ctx.currentUser
@@ -121,34 +121,26 @@ async function findPosts(author) {
 //fetch posts
 
 router.get('/posts', authenticate, async ctx => {
-
-    await Post.find({
-        $or: [{
-            author: ctx.currentUser.id,
-        },
-            {
-                profile: ctx.currentUser.id
-            }]
-    }).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').exec()
-        .then(function (posts) {
-            // console.log(posts)
-            if (!posts) {
-                ctx.status = 404
-                ctx.body = {error: 'No such post'}
-            }
-            else {
-                ctx.status = 200
-                ctx.body = posts
-            }
-        })
+    await queries.findPosts(ctx).then(function (posts) {
+        // console.log(posts)
+        if (!posts) {
+            ctx.status = 404
+            ctx.body = {error: 'No such post'}
+        }
+        else {
+            ctx.status = 200
+            ctx.body = posts
+        }
+    })
         .catch(function (err) {
             ctx.status = 500
             ctx.body = {error: err}
 
         })
+
 })
 router.get('/posts/:id', authenticate, async ctx => {
-    await Post.find({$or: [{author: ctx.params.id}, {profile: ctx.params.id}]}).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').exec()
+    await queries.findUserPosts(ctx.params.id)
         .then(async function (posts) {
             if (!posts) {
                 ctx.status = 404
@@ -165,6 +157,103 @@ router.get('/posts/:id', authenticate, async ctx => {
 
         })
 })
+router.get('/newsfeed', authenticate, async ctx => {
+    let allPosts =[]
+    ctx.body = await queries.fetchNewsFeed(ctx).then(async function (posts) {
+            if (!posts) {
+                ctx.status = 404
+                ctx.body = {error: 'No such post'}
+            }
+            else {
+                ctx.status = 200
+                for (let i = 0; i < posts.length; i++) {
+                    allPosts.push(posts[i])
+                }
+            }
+
+        }).then(async ok=>{
+           return await queries.findTwinpals(ctx).then(async function (twinpals) {
+                if (twinpals.length < 1) {
+                    ctx.status = 404
+                    ctx.body = {error: 'No such post'}
+                }
+                else {
+                    for (let i = 0; i < twinpals.length; i++) {
+                        await queries.findUserPosts(twinpals[i]._id).then(function (posts) {
+                            if (posts.length < 1) {
+                                // console.log(twinpals[i])
+                            }
+                            else {
+                                for (let j = 0; j < posts.length; j++) {
+
+                                    allPosts.push(posts[j])
+                                }
+                            }
+                        }).catch(function (err) {
+                            console.log(err)
+                        })
+                    }
+
+                    return allPosts
+                }
+        }).catch(function (err) {
+            ctx.status = 500
+            ctx.body = {error: err}
+        })
+
+
+    }).catch(function (err) {
+        ctx.status = 500
+        ctx.body = {error: err}
+    })
+
+})
+// router.get('/newsfeed', authenticate, async ctx => {
+//
+//     let allPosts =[]
+//     ctx.body = await queries.findTwinpals(ctx).then(async function (twinpals) {
+//         await queries.fetchNewsFeed(ctx).then(async function (posts) {
+//             if (!posts) {
+//                 ctx.status = 404
+//                 ctx.body = {error: 'No such post'}
+//             }
+//             else {
+//                 ctx.status = 200
+//                 for (let i = 0; i < posts.length; i++) {
+//                     allPosts.push(posts[i])
+//                 }
+//             }
+//         }).catch(function (err) {
+//             ctx.status = 500
+//             ctx.body = {error: err}
+//
+//         })
+//         if (twinpals.length < 1) {
+//             ctx.status = 404
+//             ctx.body = {error: 'No such post'}
+//         }
+//         else {
+//             for (let i = 0; i < twinpals.length; i++) {
+//                 await queries.findUserPosts(twinpals[i]._id).then(function (posts) {
+//                     if (posts.length < 1) {
+//                     }
+//                     else {
+//                         for (let j = 0; j < posts.length; j++) {
+//                             allPosts.push(posts[i])
+//                         }
+//                     }
+//                 }).catch(function (err) {
+//                     console.log(err)
+//                 })
+//             }
+//             return allPosts
+//         }
+//     }).catch(function (err) {
+//         ctx.status = 500
+//         ctx.body = {error: err}
+//     })
+//
+// })
 
 //display the profile of the twinpal
 // router.get('/twinpal/:id', async ctx => {
@@ -220,9 +309,7 @@ async function storeProfilePicture(ctx, path) {
 
 //find twinpals
 router.get('/twinpals', authenticate, async ctx => {
-    await  Person.find({
-        'birthday': ctx.currentUser.birthday
-    }).where('_id').ne(ctx.currentUser.id).select('_id username profile_picture').exec().then(function (person) {
+    await  queries.findTwinpals(ctx).then(function (person) {
         ctx.body = person
     }).catch(function (err) {
         ctx.status = 500
@@ -689,6 +776,6 @@ app.use(router.routes())
 pug.use(app)
 app.use(cors())
 app.use(session(CONFIG, app))
-// pug.use(app)
+pug.use(app)
 
 module.exports = app

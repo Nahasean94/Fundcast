@@ -167,20 +167,41 @@ const queries = {
         return await Comment.find({post: post_id}).select('author body timestamp').exec()
 
     },
-    findPosts: async function (author) {
+    findPosts: async function (ctx) {
         return await Post.find({
-            author: author
-        }).sort({timestamp: 'descending'}).exec()
+            $or: [{
+                author: ctx.currentUser.id,
+            },
+                {
+                    profile: ctx.currentUser.id
+                }]
+        }).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').exec()
+
     },
+    findUserPosts: async function (id) {
+
+        return await Post.find({$or: [{author: id}, {profile:id}]}).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').exec()
+    },
+    fetchNewsFeed: async function (ctx) {
+        return await Post.find({
+            $or: [{
+                author: ctx.currentUser._id,
+            },
+                {
+                    profile: ctx.currentUser._id
+                },]
+        }).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').exec()
+    },
+
     storeProfilePicture: async function (ctx, path) {
         return Person.findOneAndUpdate({
             _id: ctx.currentUser._id
         }, {profile_picture: path}).exec()
     },
-    findTwinpals: async function (ctx, birthday) {
-        return Person.find({
-            'birthday': birthday
-        }).where('_id').ne(ctx.session.user_id).select('_id first_name last_name').exec()
+    findTwinpals: async function (ctx) {
+        return  await Person.find({
+            'birthday': ctx.currentUser.birthday
+        }).where('_id').ne(ctx.currentUser.id).select('_id username profile_picture').exec()
     }
 }
 module.exports = queries
