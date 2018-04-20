@@ -175,23 +175,23 @@ const queries = {
                 {
                     profile: ctx.currentUser.id
                 }]
-        }).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').exec()
+        }).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').limit(2).exec()
 
     },
     findUserPosts: async function (id) {
 
-        return await Post.find({$or: [{author: id}, {profile:id}]}).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').exec()
+        return await Post.find({$or: [{author: id}, {profile:id}]},).sort({timestamp:-1}).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').limit(2).exec()
     },
-    fetchNewsFeed: async function (ctx) {
-        return await Post.find({
-            $or: [{
-                author: ctx.currentUser._id,
-            },
-                {
-                    profile: ctx.currentUser._id
-                },]
-        }).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').exec()
-    },
+    // fetchNewsFeed: async function (ctx) {
+    //     return await Post.find({
+    //         $or: [{
+    //             author: ctx.currentUser._id,
+    //         },
+    //             {
+    //                 profile: ctx.currentUser._id
+    //             },]
+    //     }).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').limit(2).exec()
+    // },
 
     storeProfilePicture: async function (ctx, path) {
         return Person.findOneAndUpdate({
@@ -202,6 +202,9 @@ const queries = {
         return  await Person.find({
             'birthday': ctx.currentUser.birthday
         }).where('_id').ne(ctx.currentUser.id).select('_id username profile_picture').exec()
+    },
+    findUsers:async function(){
+        return await Person.find({}).exec()
     }
 }
 module.exports = queries

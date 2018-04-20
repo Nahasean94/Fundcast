@@ -159,33 +159,16 @@ router.get('/posts/:id', authenticate, async ctx => {
 })
 router.get('/newsfeed', authenticate, async ctx => {
     let allPosts =[]
-    ctx.body = await queries.fetchNewsFeed(ctx).then(async function (posts) {
-            if (!posts) {
-                ctx.status = 404
-                ctx.body = {error: 'No such post'}
-            }
-            else {
-                ctx.status = 200
-                for (let i = 0; i < posts.length; i++) {
-                    allPosts.push(posts[i])
-                }
-            }
-
-        }).then(async ok=>{
-           return await queries.findTwinpals(ctx).then(async function (twinpals) {
-                if (twinpals.length < 1) {
-                    ctx.status = 404
-                    ctx.body = {error: 'No such post'}
-                }
-                else {
+    ctx.body = await queries.findTwinpals(ctx).then(async function (twinpals) {
+        twinpals.push({_id: ctx.currentUser._id})
                     for (let i = 0; i < twinpals.length; i++) {
                         await queries.findUserPosts(twinpals[i]._id).then(function (posts) {
                             if (posts.length < 1) {
                                 // console.log(twinpals[i])
                             }
                             else {
-                                for (let j = 0; j < posts.length; j++) {
-
+                                //posts come as an array, we need to pick each element of the array and push it to allPosts. When we use ES6, the spread operator will suffice.
+                                for (let j = posts.length-1; j >=0 ; j--) {
                                     allPosts.push(posts[j])
                                 }
                             }
@@ -193,79 +176,14 @@ router.get('/newsfeed', authenticate, async ctx => {
                             console.log(err)
                         })
                     }
-
                     return allPosts
-                }
         }).catch(function (err) {
             ctx.status = 500
             ctx.body = {error: err}
         })
 
 
-    }).catch(function (err) {
-        ctx.status = 500
-        ctx.body = {error: err}
-    })
-
 })
-// router.get('/newsfeed', authenticate, async ctx => {
-//
-//     let allPosts =[]
-//     ctx.body = await queries.findTwinpals(ctx).then(async function (twinpals) {
-//         await queries.fetchNewsFeed(ctx).then(async function (posts) {
-//             if (!posts) {
-//                 ctx.status = 404
-//                 ctx.body = {error: 'No such post'}
-//             }
-//             else {
-//                 ctx.status = 200
-//                 for (let i = 0; i < posts.length; i++) {
-//                     allPosts.push(posts[i])
-//                 }
-//             }
-//         }).catch(function (err) {
-//             ctx.status = 500
-//             ctx.body = {error: err}
-//
-//         })
-//         if (twinpals.length < 1) {
-//             ctx.status = 404
-//             ctx.body = {error: 'No such post'}
-//         }
-//         else {
-//             for (let i = 0; i < twinpals.length; i++) {
-//                 await queries.findUserPosts(twinpals[i]._id).then(function (posts) {
-//                     if (posts.length < 1) {
-//                     }
-//                     else {
-//                         for (let j = 0; j < posts.length; j++) {
-//                             allPosts.push(posts[i])
-//                         }
-//                     }
-//                 }).catch(function (err) {
-//                     console.log(err)
-//                 })
-//             }
-//             return allPosts
-//         }
-//     }).catch(function (err) {
-//         ctx.status = 500
-//         ctx.body = {error: err}
-//     })
-//
-// })
-
-//display the profile of the twinpal
-// router.get('/twinpal/:id', async ctx => {
-//     await queries.viewTwinpal(ctx.params.id).then(async function (profile) {
-//         if (profile.posts.length > 0) {
-//             await findPosts(profile._id).then(function (posts) {
-//                 profile.twinpal_posts = posts
-//             })
-//         }
-//         ctx.render('twinpal', {profile: profile})
-//     })
-// })
 /**
  * Handle the changing of profile picture
  */
