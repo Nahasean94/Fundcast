@@ -22,7 +22,7 @@ const mongoose = require('mongoose')
 const bcrypt = require('bcrypt')
 //Connect to Mongodb
 //TODO add username and password
-mongoose.connect('mongodb://localhost/practice', {useMongoClient: true, promiseLibrary: global.Promise})
+mongoose.connect('mongodb://localhost/practice', { promiseLibrary: global.Promise})
 
 const queries = {
     deleteAccount: async function (ctx) {

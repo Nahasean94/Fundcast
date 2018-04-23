@@ -4,7 +4,7 @@ const {Person} = require('../../databases/schemas')
 const mongoose = require('mongoose')
 
 
-mongoose.connect('mongodb://localhost/practice', {useMongoClient: true, promiseLibrary: global.Promise})
+mongoose.connect('mongodb://localhost/practice', {promiseLibrary: global.Promise})
 
 module.exports ={
    authenticate: async (ctx, next) => {

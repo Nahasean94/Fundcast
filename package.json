@@ -7,7 +7,7 @@
     "bcrypt": "^1.0.3",
     "express": "^4.16.3",
     "generator-koa": "^0.2.0",
-    "graphql": "^0.13.2",
+    "graphql": "^0.11.7",
     "graphql-tools": "^2.24.0",
     "grunt": "^1.0.2",
     "jsonwebtoken": "^8.2.1",
@@ -35,7 +35,7 @@
     "koa2-cors": "^2.0.5",
     "lodash": "^4.17.5",
     "mongodb": "^2.2.35",
-    "mongoose": "^4.13.12",
+    "mongoose": "^5.0.15",
     "nodemon": "^1.17.3",
     "raw-body": "^2.3.2",
     "requirejs": "^2.3.5",
@@ -44,13 +44,17 @@
     "validator": "^9.4.1"
   },
   "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-latest": "^6.24.1",
+    "babel-preset-stage-2": "^6.24.1",
     "chai": "^4.1.2",
     "jest": "^22.4.3",
     "mocha": "^4.1.0",
     "sinon": "^4.5.0"
   },
   "scripts": {
-    "start": "node ./server.js",
+    "start": "nodemon --exec babel-node ./server.js",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"

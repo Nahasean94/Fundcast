@@ -24,10 +24,10 @@ const typeDefs = `
     email:  String,
     cellphone: Int,
     password: String,
-    birthday: String,  
+    birthday: String,
     profile_picture: String,
     location: String,
-   
+
     date_joined: String}
 `;
 
@@ -60,3 +60,5 @@ app.use(router.allowedMethods());
 app.listen(7000, () => {
     console.log('Go to http://localhost:7000/graphiql to run queries!');
 });
+
+

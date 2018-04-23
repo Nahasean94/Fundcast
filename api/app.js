@@ -27,6 +27,77 @@ const koaBody = new KoaBody({
 
 const router = new Router()
 const app = new Koa()
+//Connect to Mongodb
+mongoose.connect('mongodb://localhost/practice', {promiseLibrary: global.Promise})
+const pug = new Pug({
+    viewPath: './public'
+})
+// // Some fake data
+// // const users = queries.findUsers()
+//
+// // The GraphQL schema in string form
+// const typeDefs = `
+//   type Newsfeed { users: [Post] }
+//   type Post {
+//    _id:ID,
+//    first_name: String,
+//     last_name: String,
+//     username: String,
+//     email:  String,
+//     cellphone: Int,
+//     password: String,
+//     birthday: String,
+//     profile_picture: String,
+//     location: String,
+//
+//     date_joined: String}
+// `;
+//
+// // The resolvers
+// const resolvers = {
+//     Newsfeed: {
+//         posts: async ctx =>{
+//             let allPosts =[]
+//             return await queries.findTwinpals(ctx).then(async function (twinpals) {
+//                 twinpals.push({_id: ctx.currentUser._id})
+//                 for (let i = 0; i < twinpals.length; i++) {
+//                     await queries.findUserPosts(twinpals[i]._id).then(function (posts) {
+//                         if (posts.length < 1) {
+//                         }
+//                         else {
+//                             allPosts=[...posts,allPosts]
+//                         }
+//                     }).catch(function (err) {
+//                         console.log(err)
+//                     })
+//                 }
+//                 return allPosts
+//             }).catch(function (err) {
+//                 ctx.status = 500
+//                 ctx.body = {error: err}
+//             })
+//
+//         } },
+// };
+//
+// // Put together a schema
+// const schema = makeExecutableSchema({
+//     typeDefs,
+//     resolvers,
+// });
+//
+//
+// // Setup the /graphiql route to show the GraphiQL UI
+// router.get(
+//     '/graphiql',
+//     graphiqlKoa({
+//         endpointURL: '/graphql', // a POST endpoint that GraphiQL will make the actual requests to
+//     }),
+// );
+// // koaBody is needed just for POST.
+//
+// router.post('/graphql', graphqlKoa({ schema: schema }));
+// router.get('/graphql', graphqlKoa({ schema: schema }));
 
 app.keys = ['some secret hurr']
 
@@ -38,11 +109,7 @@ const CONFIG = {
     signed: true,
     rolling: false
 }
-//Connect to Mongodb
-mongoose.connect('mongodb://localhost/practice', {useMongoClient: true, promiseLibrary: global.Promise})
-const pug = new Pug({
-    viewPath: './public'
-})
+
 // app.use(serve({rootDir:'public'}))
 router.get('/', async ctx => {
     ctx.render('index')
@@ -168,9 +235,10 @@ router.get('/newsfeed', authenticate, async ctx => {
                             }
                             else {
                                 //posts come as an array, we need to pick each element of the array and push it to allPosts. When we use ES6, the spread operator will suffice.
-                                for (let j = posts.length-1; j >=0 ; j--) {
-                                    allPosts.push(posts[j])
-                                }
+                                allPosts=[...posts,allPosts]
+                                // for (let j = posts.length-1; j >=0 ; j--) {
+                                //     allPosts.push(posts[j])
+                                // }
                             }
                         }).catch(function (err) {
                             console.log(err)
@@ -195,7 +263,7 @@ router.post('/profile_pic', koaBody, authenticate, async ctx => {
     if (pic !== undefined) {
         console.log("profiling")
         const path = pic.path
-        const uploader = ctx.currentUser._id
+        const uploader = tx.currentUser._id
         const arraypath = path.split('\\')
         const filepath = `${uploader}/${arraypath[arraypath.length - 1]}`
         await storeProfilePicture(ctx, filepath).then(async function (response) {
@@ -691,9 +759,7 @@ router.get('/twinpal/users/:id', async ctx => {
     })
 })
 app.use(router.routes())
-pug.use(app)
 app.use(cors())
-app.use(session(CONFIG, app))
-pug.use(app)
+
 
 module.exports = app

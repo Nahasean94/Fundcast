@@ -183,11 +183,11 @@ const AdminSchema = new Schema({
         type: String,
         required: [true, 'Email is required']
     },
-    role: {
-        type: String,
-        required: [true, 'Role is required'],
-        enum: ['system']
-    },
+    // role: {
+    //     type: String,
+    //     required: [true, 'Role is required'],
+    //     enum: ['system']
+    // },
     date_assigned: {
         type: Date,
     }
