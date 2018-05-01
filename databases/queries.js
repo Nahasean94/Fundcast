@@ -22,7 +22,7 @@ const mongoose = require('mongoose')
 const bcrypt = require('bcrypt')
 //Connect to Mongodb
 //TODO add username and password
-mongoose.connect('mongodb://localhost/practice', { promiseLibrary: global.Promise})
+mongoose.connect('mongodb://localhost/practice', {promiseLibrary: global.Promise})
 
 const queries = {
     deleteAccount: async function (ctx) {
@@ -178,33 +178,61 @@ const queries = {
         }).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').limit(2).exec()
 
     },
-    findUserPosts: async function (id) {
-
-        return await Post.find({$or: [{author: id}, {profile:id}]},).sort({timestamp:-1}).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').limit(2).exec()
+    findUserPosts: async function (args) {
+        return await Person.findById(args).select("posts").sort({timestamp: -1}).exec()
     },
-    // fetchNewsFeed: async function (ctx) {
-    //     return await Post.find({
-    //         $or: [{
-    //             author: ctx.currentUser._id,
-    //         },
-    //             {
-    //                 profile: ctx.currentUser._id
-    //             },]
-    //     }).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').limit(2).exec()
-    // },
+    findUserUploads: async function (args) {
+        return await Person.findById(args._id).select("uploads").sort({timestamp: -1}).exec()
+    },
+    fetchNewsFeed: async function (ctx) {
+        return await Post.find({
+            $or: [{
+                author: id,
+            },
+                {
+                    profile: id
+                },]
+        }).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').limit(2).exec()
+    },
 
     storeProfilePicture: async function (ctx, path) {
         return Person.findOneAndUpdate({
             _id: ctx.currentUser._id
         }, {profile_picture: path}).exec()
     },
-    findTwinpals: async function (ctx) {
-        return  await Person.find({
-            'birthday': ctx.currentUser.birthday
-        }).where('_id').ne(ctx.currentUser.id).select('_id username profile_picture').exec()
+    findTwinpals: async function (args) {
+        return await Person.find({
+            'birthday': args.birthday
+        }).where('_id').ne(args.id).exec()
     },
-    findUsers:async function(){
+    findUsers: async function () {
         return await Person.find({}).exec()
+    },
+    findAllPosts: async function () {
+        return await Post.find({}).exec()
+    },
+    findAllUsers: async function () {
+        return await Person.find({}).exec()
+    },
+    findPost: async function (args) {
+        return await Post.findById(args.id).exec()
+    },
+    findPostLikes: async function (args) {
+        return await Post.findById(args._id).select('likes').exec()
+    },
+    findLikedPosts: async function (args) {
+        return await Person.findById(args.id).select('liked_posts').exec()
+    },
+    findUpload: async function (args) {
+        return await Upload.findById(args.id).exec()
+    },
+    findUser: async function (args) {
+        return await Person.findById(args.id).exec()
+    },
+    findPostUploads: async function (args) {
+        return await Post.findById(args._id).select('uploads').exec()
     }
 }
 module.exports = queries
+
+//TODO add posts that a person writes, and ones written on their wall to be inside the post array of one's document(record)

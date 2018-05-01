@@ -740,6 +740,7 @@ router.get('/profile/remove_profile_picture', async ctx => {
         ctx.redirect('/profile')
     })
 })
+
 //delete account
 router.get('/post/delete_account', async ctx => {
     // ctx.body='ffghfg'

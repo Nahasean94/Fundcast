@@ -6,7 +6,7 @@ import cors from 'koa2-cors'
 import {Person, Group, Page, Comment, Admin, Upload, Post} from '../databases/schemas'
 const {graphqlKoa,graphiqlKoa } = require('apollo-server-koa')
 const {makeExecutableSchema} = require('graphql-tools')
-const typeDefs = require('./schema')
+const typeDefs = require('./graphql_schema')
 const resolvers = require('./resolvers')
 // const koaBody = new KoaBody({
 //     multipart: true,

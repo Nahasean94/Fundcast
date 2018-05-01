@@ -2,43 +2,63 @@ const jwt = require('jsonwebtoken')
 const config = require('../config')
 const {Person} = require('../../databases/schemas')
 const mongoose = require('mongoose')
+const bcrypt = require('bcrypt')
 
 
 mongoose.connect('mongodb://localhost/practice', {promiseLibrary: global.Promise})
 
-module.exports ={
-   authenticate: async (ctx, next) => {
-    const authorizationHeader = ctx.headers['authorization']
-    let token
-    if (authorizationHeader) {
-        token = authorizationHeader.split(' ')[1]
-    }
-    if (token) {
-       await jwt.verify(token, config.jwtSecret, async (err, decoded) => {
-            "use strict"
-            if (err) {
-                ctx.status = 401
-                ctx.body = {error: 'Failed to authenticate'}
-            }
+module.exports = {
+    authenticate: async (ctx) => {
+        const authorizationHeader = ctx.headers['authorization']
+        let token
+        if (authorizationHeader) {
+            token = authorizationHeader.split(' ')[1]
+        }
+        if (token) {
+            return await jwt.verify(token, config.jwtSecret, async (err, decoded) => {
+                if (err) {
+                    return {error: 'Failed to authenticate'}
+                }
                 else {
-                await Person.findById(decoded.id).select('_id username birthday profile_picture first_name last_name email').exec().then(async function (user) {
-                    if (!user) {
-                        ctx.status = 404
-                        ctx.body = {error: 'No such user'}
+                    return {
+                        id: decoded.id,
+                        birthday: decoded.birthday
                     }
-                    else {
-                        ctx.currentUser = user
-                     await next()
+                    // return await Person.findById(decoded.id).select('_id username birthday profile_picture first_name last_name email').exec().then(async function (user) {
+                    //     if (!user) {
+                    //         return {error: 'No such user'}
+                    //     }
+                    //     else {
+                    //         return user
+                    //     }
+                    // }).catch(function (err) {
+                    //     return {error: err}
+                    // })
+                }
+            })
+        } else {
+            return {error: 'No token provided'}
+        }
+    },
+    login: async (args) => {
+        const {email, password} = args
+        return await Person.findOne({email: email}).select('email password username birthday').exec().then(function (person) {
+            if (person) {
+                if (bcrypt.compareSync(password, person.password)) {
+                    return {
+                        token: jwt.sign({
+                            id: person._id,
+                            email: person.email,
+                            username: person.username,
+                            birthday: person.birthday,
+                        }, config.jwtSecret)
                     }
-                }).catch(function (err) {
-                    ctx.status = 500
-                    ctx.body = {error: err}
-                })
+                }
+                return {errors: {form: 'No user with such credentials exists.'}}
             }
+            return {errors: {form: 'No user with such credentials exists.'}}
+        }).catch(function (err) {
+            return {errors: {form: err}}
         })
-    } else {
-        ctx.status = 403
-        ctx.body = {error: 'No token provided'}
     }
-}
 }

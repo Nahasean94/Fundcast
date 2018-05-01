@@ -3,6 +3,9 @@ module.exports={
     Query:{
         allUsers: async (parent,args)=>{
             return await queries.findUsers()
+        },
+        allPosts: async (parent,args)=>{
+            return await queries.findAllPosts()
         }
     }
 }

@@ -227,8 +227,11 @@ const CommentSchema = new Schema({
 
         },
         likes: [{
-            type: Schema.Types.ObjectId,
-            ref: 'Person'
+            person: {
+                type: Schema.Types.ObjectId,
+                ref: 'Person'
+            },
+            timestamp:Date,
         }]
     }],
     timestamp: {
