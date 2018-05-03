@@ -1,5 +1,5 @@
 const queries = require('../databases/queries')
-const {GraphQLObjectType, GraphQLString, GraphQLSchema, GraphQLID, GraphQLInt, GraphQLList} = require('graphql')
+const {GraphQLObjectType, GraphQLString, GraphQLSchema, GraphQLID, GraphQLInt, GraphQLList, GraphQLBoolean} = require('graphql')
 const authentication = require('./middleware/authenticate')
 const PersonType = new GraphQLObjectType({
     name: 'Person',
@@ -16,8 +16,8 @@ const PersonType = new GraphQLObjectType({
         date_joined: {type: GraphQLString},
         twinpals: {
             type: new GraphQLList(PersonType),
-            resolve(parent, args) {
-                return queries.findTwinpals(parent)
+            async resolve(parent, args) {
+                return await queries.findTwinpals(parent)
             }
         },
         groups_member: {
@@ -346,7 +346,15 @@ const CommentType = new GraphQLObjectType({
 const TokenType = new GraphQLObjectType({
     name: 'Token',
     fields: () => ({
+        ok: {type: GraphQLBoolean},
         token: {type: GraphQLString},
+        error: {type: GraphQLString}
+    })
+})
+const isUserExistsType = new GraphQLObjectType({
+    name: 'isUserExists',
+    fields: () => ({
+        exists: {type: GraphQLBoolean},
     })
 })
 
@@ -379,6 +387,89 @@ const RootQuery = new GraphQLObjectType({
                 return queries.findAllPosts()
             }
         },
+
+        fetchNewsFeed: {
+            type: new GraphQLList(PostType),
+            async resolve(parent, args, ctx) {
+                return await authentication.authenticate(ctx).then(async person => {
+                    let allPosts = []
+                    return await queries.findTwinpals(person).then(async (twinpals) => {
+                        twinpals.push({_id: person.id})
+                        for (let i = 0; i < twinpals.length; i++) {
+                            await queries.findUserPosts(twinpals[i]._id).then(async (userPosts) => {
+                                const {posts} = userPosts
+                                if (posts.length < 1) {
+                                    // console.log(twinpals[i])
+                                }
+                                else {
+                                    for (let j = 0; j < posts.length; j++) {
+                                        allPosts.push(await queries.findPost({id: posts[j]}))
+                                        // allPosts.push(await this.post({id:posts[i]}))
+                                    }
+                                }
+                                // console.log(allPosts)
+                            }).catch(function (err) {
+                                console.log(err)
+                            })
+                        }
+                        return allPosts
+                    }).catch(function (err) {
+                        return {error: err}
+                    })
+
+                })
+
+            }
+        },
+        getProfileInfo: {
+            type: PersonType,
+            async resolve(parent, args, ctx) {
+                return await authentication.authenticate(ctx).then(async ({id}) => {
+                    return await queries.findUser({id: id})
+                })
+            }
+        },
+        fetchProfilePosts: {
+            type: new GraphQLList(PostType),
+            async resolve(parent, args, ctx) {
+                return await authentication.authenticate(ctx).then(async person => {
+                    let allPosts = []
+                    // return await queries.findTwinpals(person).then(async (twinpals) => {
+                    // twinpals.push({_id: person.id})
+                    // for (let i = 0; i < twinpals.length; i++) {
+                    return await queries.findUserPosts(person.id).then(async (userPosts) => {
+                        const {posts} = userPosts
+                        if (posts.length < 1) {
+                            // console.log(twinpals[i])
+                        }
+                        else {
+                            for (let j = 0; j < posts.length; j++) {
+                                allPosts.push(await queries.findPost({id: posts[j]}))
+                                // allPosts.push(await this.post({id:posts[i]}))
+                            }
+                        }
+                        // console.log(allPosts)
+                    }).then(() => {
+                        return allPosts
+                    }).catch(function (err) {
+                        console.log(err)
+                    })
+                    // }
+                    // return allPosts
+                    // }).catch(function (err) {
+                    //     return {error: err}
+                    // })
+
+                })
+
+            }
+        }
+
+    }
+})
+const Mutation = new GraphQLObjectType({
+    name: 'Mutation',
+    fields: {
         login: {
             type: TokenType,
             args: {
@@ -392,57 +483,34 @@ const RootQuery = new GraphQLObjectType({
 
             }
         },
-        fetchNewsFeed: {
-            type: new GraphQLList(PostType),
+        isUserExists: {
+            type: isUserExistsType,
+            args: {
+                email: {type: GraphQLString},
+            },
             async resolve(parent, args, ctx) {
-                return await authentication.authenticate(ctx).then(async person => {
-                    let allPosts=[]
-                  return await queries.findTwinpals(person).then(async  (twinpals)=> {
-                        twinpals.push({_id: person.id})
-                        for (let i = 0; i < twinpals.length; i++) {
-                            await queries.findUserPosts(twinpals[i]._id).then(async  (userPosts)=> {
-                           const {posts}=userPosts
-                                if (posts.length < 1) {
-                                    // console.log(twinpals[i])
-                                }
-                                else {
-                                    for (let j = 0; j <posts.length ; j++) {
-                                        allPosts.push(await queries.findPost({id:posts[j]}))
-                                        // allPosts.push(await this.post({id:posts[i]}))
-                                    }
-                                }
-                                // console.log(allPosts)
-                            }).catch(function (err) {
-                                console.log(err)
-                            })
-                        }
-                        return allPosts
-                    }).catch(function (err) {
-                       return  {error: err}
-                    })
+                return await queries.isUserExists(args).then(person => {
+                    return {exists:!!person}
 
                 })
 
             }
-        }
-
-    }
-})
-const Mutation = new GraphQLObjectType({
-    name: 'Mutation',
-    fields: {
-        addBook: {
+        },
+        signup: {
             type: PersonType,
             args: {
-                name: {type: GraphQLString},
-                genre: {type: GraphQLString},
-                author: {type: GraphQLID}
+                first_name: {type: GraphQLString},
+                last_name: {type: GraphQLString},
+                email: {type: GraphQLString},
+                password: {type: GraphQLString},
+                birthday: {type: GraphQLString},
             },
-            resolve(parent, args) {
-                return queries.addBook(args)
+            async resolve(parent, args, ctx) {
+                return await queries.signup(args).then(person => {
+                    return person
+                })
             }
         },
-
     }
 })
-module.exports = new GraphQLSchema({query: RootQuery})
+module.exports = new GraphQLSchema({query: RootQuery, mutation: Mutation})

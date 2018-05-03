@@ -124,27 +124,99 @@ const queries = {
             }
         }, {new: true}).exec()
     },
-    createNewPost: async function (ctx, post) {
-        const newPost = new Post({
-            body: post.body,
-            author: ctx.currentUser.id,
-            status: 'original'
-        })
-        try {
-            return await newPost.save().then(async function (post) {
-                return await Person.findOneAndUpdate({
-                    _id: ctx.currentUser.id
-                }, {$push: {posts: post._id}}).exec()
-            }).catch(function (err) {
-                ctx.status = 500
-                ctx.body = err
-                return ctx
-            })
-        }
-        catch (err) {
-            ctx.status = 500
-            ctx.body = err
-        }
+    createNewPost: async function (author, post) {
+        // const post = ctx.request.body
+        // const body = post.fields.body
+        // const profile = post.fields.profile
+        // const upload = post.files.upload
+        // // console.log(post)
+        // if (body === '' && upload !== undefined) {
+        //     // console.log(upload)
+        //     const path = upload.path
+        //     const uploader = ctx.currentUser._id
+        //     const arraypath = path.split('\\')
+        //     const filepath = `${uploader}/${arraypath[arraypath.length - 1]}`
+        //     await queries.storeUpload(ctx, filepath).then(async function (upload) {
+        //         const newPath = `./public/uploads/${filepath}`
+        //         if (!fs.existsSync(`./public/uploads/${uploader}`))
+        //             fs.mkdirSync(`./public/uploads/${uploader}`)
+        //         fs.rename(ctx.request.body.files.upload.path, newPath)
+        //         await new Post({
+        //             author: ctx.currentUser.id,
+        //             status: 'original',
+        //             timestamp: new Date(),
+        //             profile: profile,
+        //             uploads: upload._id
+        //
+        //         }).save({new: true}).then(async function (post) {
+        //             await post.populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').execPopulate().then(async function (pos) {
+        //                 ctx.status = 200
+        //                 ctx.body = pos
+        //                 Person.findOneAndUpdate({
+        //                     _id: ctx.currentUser.id
+        //                 }, {$push: {uploads: upload._id}}).exec()
+        //
+        //             })
+        //         }).catch(function (err) {
+        //             ctx.status = 500
+        //             ctx.body = {errors: err}
+        //         })
+        //     })
+        //
+        // } else if (upload === undefined && body !== '') {
+        //     // console.log("sdf")
+        //     await new Post({
+        //         body: body,
+        //         author: ctx.currentUser.id,
+        //         status: 'original',
+        //         timestamp: new Date(),
+        //         profile: profile
+        //     }).save({new: true}).then(async function (post) {
+        //         await post.populate('author', 'username profile_picture').populate('profile', 'username profile_picture').execPopulate().then(function (pos) {
+        //             ctx.status = 200
+        //             ctx.body = pos
+        //             Person.findOneAndUpdate({
+        //                 _id: ctx.currentUser.id
+        //             }, {$push: {posts: post._id}}).exec()
+        //
+        //         }).catch(function (err) {
+        //             ctx.status = 500
+        //             ctx.body = {errors: err}
+        //         })
+        //     })
+        // }
+        // else if (upload !== undefined && body !== '') {
+        //     const path = upload.path
+        //     const uploader = ctx.currentUser._id
+        //     const arraypath = path.split('\\')
+        //     const filepath = `${uploader}/${arraypath[arraypath.length - 1]}`
+        //     await storeUpload(ctx, filepath).then(async function (upload) {
+        //         const newPath = `./public/uploads/${filepath}`
+        //         if (!fs.existsSync(`./public/uploads/${uploader}`))
+        //             fs.mkdirSync(`./public/uploads/${uploader}`)
+        //         fs.rename(ctx.request.body.files.upload.path, newPath)
+        //         await new Post({
+        //             body: body,
+        //             author: ctx.currentUser.id,
+        //             status: 'original',
+        //             timestamp: new Date(),
+        //             profile: profile,
+        //             uploads: upload._id
+        //
+        //         }).save({new: true}).then(async function (post) {
+        //             await post.populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').execPopulate().then(async function (pos) {
+        //                 ctx.status = 200
+        //                 ctx.body = pos
+        //                 Person.findOneAndUpdate({
+        //                     _id: ctx.currentUser.id
+        //                 }, {$push: {uploads: upload._id}}).exec()
+        //             })
+        //         }).catch(function (err) {
+        //             ctx.status = 500
+        //             ctx.body = {errors: err}
+        //         })
+        //     })
+        // }
     },
     viewTwinpal: async function (id) {
         return Person.findOne({
@@ -226,8 +298,11 @@ const queries = {
     findUpload: async function (args) {
         return await Upload.findById(args.id).exec()
     },
-    findUser: async function (args) {
+   findUser: async function (args) {
         return await Person.findById(args.id).exec()
+    },
+    isUserExists: async function (args) {
+        return await Person.findOne({email:args.email}).exec()
     },
     findPostUploads: async function (args) {
         return await Post.findById(args._id).select('uploads').exec()

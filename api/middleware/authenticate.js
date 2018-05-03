@@ -46,19 +46,31 @@ module.exports = {
             if (person) {
                 if (bcrypt.compareSync(password, person.password)) {
                     return {
+                        ok: true,
                         token: jwt.sign({
                             id: person._id,
                             email: person.email,
                             username: person.username,
                             birthday: person.birthday,
-                        }, config.jwtSecret)
+                        }, config.jwtSecret),
+                        error: null
                     }
                 }
-                return {errors: {form: 'No user with such credentials exists.'}}
+                return {
+                    ok: false,
+                    token: null,
+                    error: 'No user with such credentials exists. Please check your email and password and try again.'
+                }
             }
-            return {errors: {form: 'No user with such credentials exists.'}}
+            return {
+                    ok: false,
+                    token: null,
+                    error: 'No user with such credentials exists. Please check your email and password and try again.'
+            }
         }).catch(function (err) {
-            return {errors: {form: err}}
+            return { ok:false,
+                token: null,
+                error: err}//TODO remove this error and provide more robust error handling
         })
     }
 }
