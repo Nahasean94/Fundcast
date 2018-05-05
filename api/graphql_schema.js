@@ -218,6 +218,22 @@ const PostType = new GraphQLObjectType({
         status: {type: GraphQLString},
         timestamp: {type: GraphQLString},
         //TODO add comments
+        comments: {
+            type: new GraphQLList(CommentType),
+            async resolve(parent, args) {
+                return await queries.findPostComments(parent).then(async postComments => {
+                    const {comments} = postComments
+                    const populatedComments=[]
+                    if (comments.length > 0) {
+                        for (let i = comments.length-1; i >=0 ; i--) {
+                           populatedComments.push(await queries.findComment({id: comments[i]}))
+                        }
+                    }
+                        return populatedComments
+                })
+
+            }
+        },
     })
 })
 const GroupType = new GraphQLObjectType({
@@ -317,27 +333,27 @@ const CommentType = new GraphQLObjectType({
         id: {type: GraphQLID},
         author: {
             type: PersonType,
-            resolve(parent, args) {
-
+            async resolve(parent, args) {
+                return await queries.findUser({id: parent.author})
             }
         },
         body: {type: GraphQLString},
         post: {
             type: PostType,
             resolve(parent, args) {
-
+//TODO do we really need this resolver?
             }
         },
         likes: {
             type: new GraphQLList(LikeType),
             resolve(parent, args) {
-
+//TODO add this resolver when we start liking comments
             }
         },
         replies: {
             type: new GraphQLList(CommentRepliesType),
             resolve(parent, args) {
-
+//TODO add this resolver when we add replies
             }
         },
         timestamp: {type: GraphQLString},
@@ -387,7 +403,6 @@ const RootQuery = new GraphQLObjectType({
                 return queries.findAllPosts()
             }
         },
-
         fetchNewsFeed: {
             type: new GraphQLList(PostType),
             async resolve(parent, args, ctx) {
@@ -399,7 +414,7 @@ const RootQuery = new GraphQLObjectType({
                             await queries.findUserPosts(twinpals[i]._id).then(async (userPosts) => {
                                 const {posts} = userPosts
                                 if (posts.length < 1) {
-                                    // console.log(twinpals[i])
+
                                 }
                                 else {
                                     for (let j = 0; j < posts.length; j++) {
@@ -407,7 +422,7 @@ const RootQuery = new GraphQLObjectType({
                                         // allPosts.push(await this.post({id:posts[i]}))
                                     }
                                 }
-                                // console.log(allPosts)
+
                             }).catch(function (err) {
                                 console.log(err)
                             })
@@ -429,37 +444,59 @@ const RootQuery = new GraphQLObjectType({
                 })
             }
         },
+        fetchPalProfile: {
+            type: PersonType,
+            args: {id: {type: GraphQLID}},
+            async resolve(parent, args, ctx) {
+
+                return await queries.findUser({id: args.id})
+            }
+        },
         fetchProfilePosts: {
             type: new GraphQLList(PostType),
             async resolve(parent, args, ctx) {
                 return await authentication.authenticate(ctx).then(async person => {
                     let allPosts = []
-                    // return await queries.findTwinpals(person).then(async (twinpals) => {
-                    // twinpals.push({_id: person.id})
-                    // for (let i = 0; i < twinpals.length; i++) {
                     return await queries.findUserPosts(person.id).then(async (userPosts) => {
                         const {posts} = userPosts
                         if (posts.length < 1) {
-                            // console.log(twinpals[i])
+
                         }
                         else {
                             for (let j = 0; j < posts.length; j++) {
                                 allPosts.push(await queries.findPost({id: posts[j]}))
-                                // allPosts.push(await this.post({id:posts[i]}))
                             }
                         }
-                        // console.log(allPosts)
                     }).then(() => {
                         return allPosts
                     }).catch(function (err) {
                         console.log(err)
                     })
-                    // }
-                    // return allPosts
-                    // }).catch(function (err) {
-                    //     return {error: err}
-                    // })
+                })
 
+            }
+        },
+        fetchPalPosts: {
+            type: new GraphQLList(PostType),
+            args: {id: {type: GraphQLID}},
+            async resolve(parent, args, ctx) {
+                return await authentication.authenticate(ctx).then(async person => {
+                    let allPosts = []
+                    return await queries.findUserPosts(args.id).then(async (userPosts) => {
+                        const {posts} = userPosts
+                        if (posts.length < 1) {
+
+                        }
+                        else {
+                            for (let j = 0; j < posts.length; j++) {
+                                allPosts.push(await queries.findPost({id: posts[j]}))
+                            }
+                        }
+                    }).then(() => {
+                        return allPosts
+                    }).catch(function (err) {
+                        console.log(err)
+                    })
                 })
 
             }
@@ -490,7 +527,7 @@ const Mutation = new GraphQLObjectType({
             },
             async resolve(parent, args, ctx) {
                 return await queries.isUserExists(args).then(person => {
-                    return {exists:!!person}
+                    return {exists: !!person}
 
                 })
 
@@ -508,6 +545,74 @@ const Mutation = new GraphQLObjectType({
             async resolve(parent, args, ctx) {
                 return await queries.signup(args).then(person => {
                     return person
+                })
+            }
+        },
+        likePost: {
+            type: PostType,
+            args: {
+                id: {type: GraphQLID},
+            },
+            async resolve(parent, args, ctx) {
+                return await authentication.authenticate(ctx).then(async ({id}) => {
+                    return await queries.likePost(id, args.id).then(post => {
+                        return post
+                    })
+                })
+            }
+        },
+        unlikePost: {
+            type: PostType,
+            args: {
+                id: {type: GraphQLID},
+            },
+            async resolve(parent, args, ctx) {
+                return await authentication.authenticate(ctx).then(async ({id}) => {
+                    return await queries.unlikePost(id, args.id).then(post => {
+                        return post
+                    })
+                })
+            }
+        },
+        updatePost: {
+            type: PostType,
+            args: {
+                id: {type: GraphQLID},
+                body: {type: GraphQLString},
+            },
+            async resolve(parent, args, ctx) {
+                return await authentication.authenticate(ctx).then(async ({id}) => {
+                    return await queries.updatePost(args).then(post => {
+                        return post
+                    })
+                })
+            }
+        },
+        deletePost: {
+            type: PostType,
+            args: {
+                id: {type: GraphQLID},
+                body: {type: GraphQLString},
+            },
+            async resolve(parent, args, ctx) {
+                return await authentication.authenticate(ctx).then(async ({id}) => {
+                    return await queries.deletePost(id, args.id).then(post => {
+                        return post
+                    })
+                })
+            }
+        },
+        addComment: {
+            type: PostType,
+            args: {
+                post_id: {type: GraphQLID},
+                comment: {type: GraphQLString},
+            },
+            async resolve(parent, args, ctx) {
+                return await authentication.authenticate(ctx).then(async ({id}) => {
+                    return await queries.storeComment(id, args).then(comment => {
+                        return comment
+                    })
                 })
             }
         },

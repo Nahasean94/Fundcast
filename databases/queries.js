@@ -38,9 +38,9 @@ const queries = {
             })
         })
     },
-    deletePost: async function (ctx, post_id) {
+    deletePost: async function (author, post_id) {
         Comment.remove({post: post_id}).exec()
-        Person.findOneAndUpdate({_id: ctx.currentUser._id}, {$pull: {posts: post_id}}).exec()
+        Person.findOneAndUpdate({_id: author}, {$pull: {posts: post_id}}).exec()
         return await Post.findByIdAndRemove({_id: post_id}).exec()
 
     },
@@ -63,14 +63,21 @@ const queries = {
             // location: profile.location
         }).exec()
     },
-    storeComment: async function (ctx, comment) {
+    storeComment: async function (author, comment) {
         //TODO look for a way to only receive data from one form
+
         return await new Comment({
-            author: ctx.currentUser.id,
+            author: author,
             body: comment.comment,
-            post: comment.postId,
+            post: comment.post_id,
             timestamp: new Date()
-        }).save()
+        }).save().then(savedComment => {
+            return Post.findOneAndUpdate({_id: comment.post_id}, {
+                $push: {
+                    comments: savedComment._id
+                }
+            }, {new: true}).exec()
+        })
     },
     updatePost: async function (post) {
         return await Post.findOneAndUpdate({
@@ -96,29 +103,30 @@ const queries = {
             }
         }, {new: true}).exec()
     },
-    unlikePost: async function (ctx, id) {
+    unlikePost: async function (unliker, id) {
         //TODO provide feedback on the front end
         return await Post.findOneAndUpdate({
             _id: id
         }, {
             $pull: {
                 likes: {
-                    liked_by: ctx.currentUser.id
+                    liked_by: unliker
                 }
             }
         }, {new: true}).exec()
     },
-    likePost: async function (ctx, id) {
+    likePost: async function (liker, id) {
         //TODO provide feedback on the front end
+        console.log(liker, id)
         return await Post.findOneAndUpdate({
             _id: id,
-            author: {$ne: ctx.currentUser.id},
-            'likes.liked_by': {$ne: ctx.currentUser.id}
+            author: {$ne: liker},
+            'likes.liked_by': {$ne: liker}
 
         }, {
             $push: {
                 likes: {
-                    liked_by: ctx.currentUser.id,
+                    liked_by: liker,
                     timestamp: new Date()
                 }
             }
@@ -235,10 +243,10 @@ const queries = {
             date_joined: new Date()
         }).save()
     },
-    findComments: async function (post_id) {
-        return await Comment.find({post: post_id}).select('author body timestamp').exec()
-
-    },
+    // findComments: async function (post_id) {
+    //     return await Comment.find({post: post_id}).select('author body timestamp').exec()
+    //
+    // },
     findPosts: async function (ctx) {
         return await Post.find({
             $or: [{
@@ -292,17 +300,23 @@ const queries = {
     findPostLikes: async function (args) {
         return await Post.findById(args._id).select('likes').exec()
     },
+    findPostComments: async function (args) {
+        return await Post.findById(args._id).select('comments').exec()
+    },
+    findComment: async function (args) {
+        return await Comment.findById(args.id).exec()
+    },
     findLikedPosts: async function (args) {
         return await Person.findById(args.id).select('liked_posts').exec()
     },
     findUpload: async function (args) {
         return await Upload.findById(args.id).exec()
     },
-   findUser: async function (args) {
+    findUser: async function (args) {
         return await Person.findById(args.id).exec()
     },
     isUserExists: async function (args) {
-        return await Person.findOne({email:args.email}).exec()
+        return await Person.findOne({email: args.email}).exec()
     },
     findPostUploads: async function (args) {
         return await Post.findById(args._id).select('uploads').exec()

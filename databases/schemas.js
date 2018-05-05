@@ -87,6 +87,10 @@ const PostSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'Person'
     },
+    comments:[ {
+        type: Schema.Types.ObjectId,
+        ref: 'Comment'
+    }],
 
     //TODO show a count of all likes,views,etc when shared. Keep a link to the original poster
     likes:
