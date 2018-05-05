@@ -51,9 +51,9 @@ const queries = {
             timestamp: new Date()
         }).save()
     },
-    updateProfile: async function (ctx, profile) {
+    updateProfile: async function (id, profile) {
         //TODO record the date profile was updated
-        return await Person.findOneAndUpdate({_id: ctx.currentUser._id}, {
+        return await Person.findOneAndUpdate({_id: id}, {
             first_name: profile.first_name,
             last_name: profile.last_name,
             username: profile.username,

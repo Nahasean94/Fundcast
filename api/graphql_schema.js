@@ -548,6 +548,24 @@ const Mutation = new GraphQLObjectType({
                 })
             }
         },
+        updateProfile: {
+            type: PersonType,
+            args: {
+                id: {type: GraphQLID},
+                first_name: {type: GraphQLString},
+                last_name: {type: GraphQLString},
+                username: {type: GraphQLString},
+                email: {type: GraphQLString},
+                birthday: {type: GraphQLString},
+            },
+            async resolve(parent, args, ctx) {
+                return await authentication.authenticate(ctx).then(async ({id}) => {
+                    return await queries.updateProfile(id,args).then(person => {
+                        return person
+                    })
+                })
+            }
+        },
         likePost: {
             type: PostType,
             args: {
