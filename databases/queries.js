@@ -134,9 +134,9 @@ const queries = {
     },
     createNewPost: async function (author, post) {
         // const post = ctx.request.body
-        // const body = post.fields.body
-        // const profile = post.fields.profile
-        // const upload = post.files.upload
+        const body = post.body
+        const profile = post.profile
+        const upload = undefined
         // // console.log(post)
         // if (body === '' && upload !== undefined) {
         //     // console.log(upload)
@@ -171,28 +171,24 @@ const queries = {
         //         })
         //     })
         //
-        // } else if (upload === undefined && body !== '') {
-        //     // console.log("sdf")
-        //     await new Post({
-        //         body: body,
-        //         author: ctx.currentUser.id,
-        //         status: 'original',
-        //         timestamp: new Date(),
-        //         profile: profile
-        //     }).save({new: true}).then(async function (post) {
-        //         await post.populate('author', 'username profile_picture').populate('profile', 'username profile_picture').execPopulate().then(function (pos) {
-        //             ctx.status = 200
-        //             ctx.body = pos
-        //             Person.findOneAndUpdate({
-        //                 _id: ctx.currentUser.id
-        //             }, {$push: {posts: post._id}}).exec()
-        //
-        //         }).catch(function (err) {
-        //             ctx.status = 500
-        //             ctx.body = {errors: err}
-        //         })
-        //     })
         // }
+        // else
+        if (upload === undefined && body !== '') {
+            return await new Post({
+                body: body,
+                author: author,
+                status: 'original',
+                timestamp: new Date(),
+                profile: profile
+            }).save({new: true}).then(async function (post) {
+               Person.findOneAndUpdate({
+                    _id: author
+                }, {$push: {posts: post._id}}).exec()
+                return post
+            }).catch(function (err) {
+                console.log(err)
+            })
+        }
         // else if (upload !== undefined && body !== '') {
         //     const path = upload.path
         //     const uploader = ctx.currentUser._id
