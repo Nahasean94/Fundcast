@@ -1,24 +1,18 @@
 const queries = require('../databases/queries')
-const {GraphQLObjectType, GraphQLString, GraphQLSchema, GraphQLID, GraphQLInt, GraphQLList, GraphQLBoolean,GraphQLScalarType} = require('graphql')
-const {GraphQLUpload}=require('apollo-upload-server')
+const {GraphQLObjectType, GraphQLString, GraphQLSchema, GraphQLID, GraphQLInt, GraphQLList, GraphQLBoolean, GraphQLScalarType} = require('graphql')
+const {GraphQLUpload} = require('apollo-upload-server')
 const authentication = require('./middleware/authenticate')
-const fs =require( 'fs')
-const promisesAll =require( 'promise-all')
-const mkdirp =require( 'mkdirp')
-const shortid =require( 'shortid')
+const fs = require('fs')
+const mkdirp = require('mkdirp')
+const shortid = require('shortid')
 
 
-const uploadDir = './uploads'
-// const db = lowdb(new FileSync('db.json'))
-//
-// // Seed an empty DB
-// db.defaults({ uploads: [] }).write()
+const storeFS = ({stream, filename},id, uploader) => {
+    const uploadDir = `./public/uploads/${uploader}`
 
 // Ensure upload directory exists
-mkdirp.sync(uploadDir)
+    mkdirp.sync(uploadDir)
 
-const storeFS = ({ stream, filename },uploader) => {
-    const id = shortid.generate()
     const path = `${uploadDir}/${id}-${filename}`
     return new Promise((resolve, reject) =>
         stream
@@ -30,14 +24,16 @@ const storeFS = ({ stream, filename },uploader) => {
             })
             .pipe(fs.createWriteStream(path))
             .on('error', error => reject(error))
-            .on('finish', () => resolve({ id, path }))
+            .on('finish', () => resolve())
     )
 }
 
-const processUpload = async (upload,uploader) => {
-    const { stream, filename, mimetype, encoding } = await upload
-  return  await storeFS({ stream, filename },uploader).then(()=> true)
-    // return storeDB({ id, filename, mimetype, encoding, path })
+const processUpload = async (upload, profile, uploader) => {
+    const id = shortid.generate()
+    const {stream, filename,} = await upload
+    const path = `${uploader}/${id}-${filename}`
+    return await storeFS({stream, filename},id, uploader).then(() =>
+        queries.saveUploads(path, profile, uploader))
 }
 
 
@@ -207,9 +203,6 @@ const UploadType = new GraphQLObjectType({
         timestamp: {type: GraphQLString},
     })
 })
-// const typeDefs=require('./modules/schema')
-// const resolvers=require('./modules/resolvers')
-// const graphqlTools =require('graphql-tools')
 const PostType = new GraphQLObjectType({
     name: 'Post',
     fields: () => ({
@@ -266,13 +259,13 @@ const PostType = new GraphQLObjectType({
             async resolve(parent, args) {
                 return await queries.findPostComments(parent).then(async postComments => {
                     const {comments} = postComments
-                    const populatedComments=[]
+                    const populatedComments = []
                     if (comments.length > 0) {
-                        for (let i = comments.length-1; i >=0 ; i--) {
-                           populatedComments.push(await queries.findComment({id: comments[i]}))
+                        for (let i = comments.length - 1; i >= 0; i--) {
+                            populatedComments.push(await queries.findComment({id: comments[i]}))
                         }
                     }
-                        return populatedComments
+                    return populatedComments
                 })
 
             }
@@ -410,41 +403,13 @@ const TokenType = new GraphQLObjectType({
         error: {type: GraphQLString}
     })
 })
-const CustomType = new GraphQLScalarType({
-    name: 'Custom',
-    fields: () => ({
-        file: {type: GraphQLUpload},
-    }),
-    serialize: value => value,
-    parseValue: value => value,
-    parseLiteral: (ast) => {
-        if (ast.kind !== Kind.OBJECT) {
-            throw new GraphQLError(
-                `Query error: Can only parse object but got a: ${ast.kind}`,
-                [ast],
-            );
-        }
-        return ast.value;
-    },
-})
-
-// function oddValue(value) {
-//     return value % 2 === 1 ? value : null;
-// }
-
-
 const isUserExistsType = new GraphQLObjectType({
     name: 'isUserExists',
     fields: () => ({
         exists: {type: GraphQLBoolean},
     })
 })
-// const processUpload = async upload => {
-//     const { stream, filename, mimetype, encoding } = await upload
-//     console.log(filename)
-//     const { id, path } = await storeFS({ stream, filename })
-//     return storeDB({ id, filename, mimetype, encoding, path })
-// }
+
 const RootQuery = new GraphQLObjectType({
     name: 'RootQueryType',
     fields: {
@@ -483,7 +448,7 @@ const RootQuery = new GraphQLObjectType({
                         twinpals.push({_id: person.id})
                         for (let i = 0; i < twinpals.length; i++) {
                             await queries.findUserPosts(twinpals[i]._id).then(async (userPosts) => {
-                                const {posts} = userPosts
+                                const posts = userPosts
                                 if (posts.length < 1) {
 
                                 }
@@ -529,7 +494,7 @@ const RootQuery = new GraphQLObjectType({
                 return await authentication.authenticate(ctx).then(async person => {
                     let allPosts = []
                     return await queries.findUserPosts(person.id).then(async (userPosts) => {
-                        const {posts} = userPosts
+                        const posts = userPosts
                         if (posts.length < 1) {
 
                         }
@@ -554,7 +519,7 @@ const RootQuery = new GraphQLObjectType({
                 return await authentication.authenticate(ctx).then(async person => {
                     let allPosts = []
                     return await queries.findUserPosts(args.id).then(async (userPosts) => {
-                        const {posts} = userPosts
+                        const posts = userPosts
                         if (posts.length < 1) {
 
                         }
@@ -631,7 +596,7 @@ const Mutation = new GraphQLObjectType({
             },
             async resolve(parent, args, ctx) {
                 return await authentication.authenticate(ctx).then(async ({id}) => {
-                    return await queries.updateProfile(id,args).then(person => {
+                    return await queries.updateProfile(id, args).then(person => {
                         return person
                     })
                 })
@@ -720,20 +685,17 @@ const Mutation = new GraphQLObjectType({
             }
         },
         uploadFile: {
-            type:GraphQLUpload ,
+            type: PostType,
             args: {
                 file: {type: GraphQLUpload},
-                uploader:{type:GraphQLString}
+                profile: {type: GraphQLID},
             },
-             resolve(parent, args, ctx,...rest) {
-                processUpload(args.file,args.uploader)
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return await processUpload(args.file, args.profile, id)
             }
         },
     }
 })
 
-// const schema1=new GraphQLSchema({ typeDefs, resolvers })
-// const schema2=
-// console.log(schema1)
-// console.log(schema2)
 module.exports = new GraphQLSchema({query: RootQuery, mutation: Mutation})

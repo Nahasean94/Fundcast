@@ -44,10 +44,10 @@ const queries = {
         return await Post.findByIdAndRemove({_id: post_id}).exec()
 
     },
-    storeUpload: async function (ctx, filepath) {
+    storeUpload: async function (path, uploader) {
         return await new Upload({
-            path: filepath,
-            uploader: ctx.currentUser._id,
+            path: path,
+            uploader: uploader,
             timestamp: new Date()
         }).save()
     },
@@ -133,47 +133,11 @@ const queries = {
         }, {new: true}).exec()
     },
     createNewPost: async function (author, post) {
-        // const post = ctx.request.body
+
         const body = post.body
         const profile = post.profile
-        const upload = undefined
-        // // console.log(post)
-        // if (body === '' && upload !== undefined) {
-        //     // console.log(upload)
-        //     const path = upload.path
-        //     const uploader = ctx.currentUser._id
-        //     const arraypath = path.split('\\')
-        //     const filepath = `${uploader}/${arraypath[arraypath.length - 1]}`
-        //     await queries.storeUpload(ctx, filepath).then(async function (upload) {
-        //         const newPath = `./public/uploads/${filepath}`
-        //         if (!fs.existsSync(`./public/uploads/${uploader}`))
-        //             fs.mkdirSync(`./public/uploads/${uploader}`)
-        //         fs.rename(ctx.request.body.files.upload.path, newPath)
-        //         await new Post({
-        //             author: ctx.currentUser.id,
-        //             status: 'original',
-        //             timestamp: new Date(),
-        //             profile: profile,
-        //             uploads: upload._id
-        //
-        //         }).save({new: true}).then(async function (post) {
-        //             await post.populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').execPopulate().then(async function (pos) {
-        //                 ctx.status = 200
-        //                 ctx.body = pos
-        //                 Person.findOneAndUpdate({
-        //                     _id: ctx.currentUser.id
-        //                 }, {$push: {uploads: upload._id}}).exec()
-        //
-        //             })
-        //         }).catch(function (err) {
-        //             ctx.status = 500
-        //             ctx.body = {errors: err}
-        //         })
-        //     })
-        //
-        // }
-        // else
-        if (upload === undefined && body !== '') {
+
+        if (body !== '') {
             return await new Post({
                 body: body,
                 author: author,
@@ -181,7 +145,7 @@ const queries = {
                 timestamp: new Date(),
                 profile: profile
             }).save({new: true}).then(async function (post) {
-               Person.findOneAndUpdate({
+                Person.findOneAndUpdate({
                     _id: author
                 }, {$push: {posts: post._id}}).exec()
                 return post
@@ -189,44 +153,35 @@ const queries = {
                 console.log(err)
             })
         }
-        // else if (upload !== undefined && body !== '') {
-        //     const path = upload.path
-        //     const uploader = ctx.currentUser._id
-        //     const arraypath = path.split('\\')
-        //     const filepath = `${uploader}/${arraypath[arraypath.length - 1]}`
-        //     await storeUpload(ctx, filepath).then(async function (upload) {
-        //         const newPath = `./public/uploads/${filepath}`
-        //         if (!fs.existsSync(`./public/uploads/${uploader}`))
-        //             fs.mkdirSync(`./public/uploads/${uploader}`)
-        //         fs.rename(ctx.request.body.files.upload.path, newPath)
-        //         await new Post({
-        //             body: body,
-        //             author: ctx.currentUser.id,
-        //             status: 'original',
-        //             timestamp: new Date(),
-        //             profile: profile,
-        //             uploads: upload._id
-        //
-        //         }).save({new: true}).then(async function (post) {
-        //             await post.populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').execPopulate().then(async function (pos) {
-        //                 ctx.status = 200
-        //                 ctx.body = pos
-        //                 Person.findOneAndUpdate({
-        //                     _id: ctx.currentUser.id
-        //                 }, {$push: {uploads: upload._id}}).exec()
-        //             })
-        //         }).catch(function (err) {
-        //             ctx.status = 500
-        //             ctx.body = {errors: err}
-        //         })
-        //     })
-        // }
+    },
+    saveUploads: async function (path, profile, uploader) {
+        return await this.storeUpload(path, uploader).then(async upload => {
+            //add the upload to the uploader's document
+            Person.findOneAndUpdate({
+                _id: uploader
+            }, {$push: {uploads: upload._id}}).exec()
+            //create a new post of the uploaded file
+            const post = await new Post({
+                body: '',
+                author: uploader,
+                status: 'original',
+                timestamp: new Date(),
+                profile: profile,
+                uploads: upload._id
+
+            }).save()
+            Person.findOneAndUpdate({
+                _id: uploader
+            }, {$push: {posts: post._id}}).exec()
+            return post
+        })
     },
     viewTwinpal: async function (id) {
         return Person.findOne({
             '_id': id
         }).select('first_name last_name profile_picture posts').exec()
-    },
+    }
+    ,
     signup: async function (userInfo) {
         return await new Person({
             first_name: userInfo.first_name,
@@ -238,11 +193,12 @@ const queries = {
             profile_picture: 'default.jpg',
             date_joined: new Date()
         }).save()
-    },
-    // findComments: async function (post_id) {
-    //     return await Comment.find({post: post_id}).select('author body timestamp').exec()
-    //
-    // },
+    }
+    ,
+// findComments: async function (post_id) {
+//     return await Comment.find({post: post_id}).select('author body timestamp').exec()
+//
+// },
     findPosts: async function (ctx) {
         return await Post.find({
             $or: [{
@@ -252,14 +208,23 @@ const queries = {
                     profile: ctx.currentUser.id
                 }]
         }).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').limit(2).exec()
-
     },
     findUserPosts: async function (args) {
-        return await Person.findById(args).select("posts").sort({timestamp: -1}).exec()
-    },
+        // return await Person.findById(args).select("posts").sort({timestamp: -1}).exec()
+        return await Post.find({
+            $or: [{
+                author: args,
+            },
+                {
+                    profile: args
+                },]
+        }).sort({timestamp: -1}).exec()
+    }
+    ,
     findUserUploads: async function (args) {
         return await Person.findById(args._id).select("uploads").sort({timestamp: -1}).exec()
-    },
+    }
+    ,
     fetchNewsFeed: async function (ctx) {
         return await Post.find({
             $or: [{
@@ -269,51 +234,65 @@ const queries = {
                     profile: id
                 },]
         }).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').limit(2).exec()
-    },
+    }
+    ,
 
     storeProfilePicture: async function (ctx, path) {
         return Person.findOneAndUpdate({
             _id: ctx.currentUser._id
         }, {profile_picture: path}).exec()
-    },
+    }
+    ,
     findTwinpals: async function (args) {
         return await Person.find({
             'birthday': args.birthday
         }).where('_id').ne(args.id).exec()
-    },
+    }
+    ,
     findUsers: async function () {
         return await Person.find({}).exec()
-    },
+    }
+    ,
     findAllPosts: async function () {
         return await Post.find({}).exec()
-    },
+    }
+    ,
     findAllUsers: async function () {
         return await Person.find({}).exec()
-    },
+    }
+    ,
     findPost: async function (args) {
         return await Post.findById(args.id).exec()
-    },
+    }
+    ,
     findPostLikes: async function (args) {
         return await Post.findById(args._id).select('likes').exec()
-    },
+    }
+    ,
     findPostComments: async function (args) {
         return await Post.findById(args._id).select('comments').exec()
-    },
+    }
+    ,
     findComment: async function (args) {
         return await Comment.findById(args.id).exec()
-    },
+    }
+    ,
     findLikedPosts: async function (args) {
         return await Person.findById(args.id).select('liked_posts').exec()
-    },
+    }
+    ,
     findUpload: async function (args) {
         return await Upload.findById(args.id).exec()
-    },
+    }
+    ,
     findUser: async function (args) {
         return await Person.findById(args.id).exec()
-    },
+    }
+    ,
     isUserExists: async function (args) {
         return await Person.findOne({email: args.email}).exec()
-    },
+    }
+    ,
     findPostUploads: async function (args) {
         return await Post.findById(args._id).select('uploads').exec()
     }
