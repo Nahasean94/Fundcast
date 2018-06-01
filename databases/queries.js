@@ -237,9 +237,9 @@ const queries = {
     }
     ,
 
-    storeProfilePicture: async function (ctx, path) {
-        return Person.findOneAndUpdate({
-            _id: ctx.currentUser._id
+    storeProfilePicture: async function (path, uploader) {
+        return await Person.findOneAndUpdate({
+            _id: uploader,
         }, {profile_picture: path}).exec()
     }
     ,

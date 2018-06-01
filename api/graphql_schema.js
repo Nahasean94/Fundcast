@@ -7,7 +7,7 @@ const mkdirp = require('mkdirp')
 const shortid = require('shortid')
 
 
-const storeFS = ({stream, filename},id, uploader) => {
+const storeFS = ({stream, filename}, id, uploader) => {
     const uploadDir = `./public/uploads/${uploader}`
 
 // Ensure upload directory exists
@@ -32,8 +32,15 @@ const processUpload = async (upload, profile, uploader) => {
     const id = shortid.generate()
     const {stream, filename,} = await upload
     const path = `${uploader}/${id}-${filename}`
-    return await storeFS({stream, filename},id, uploader).then(() =>
+    return await storeFS({stream, filename}, id, uploader).then(() =>
         queries.saveUploads(path, profile, uploader))
+}
+const processProfilePicture = async (upload, uploader) => {
+    const id = shortid.generate()
+    const {stream, filename,} = await upload
+    const path = `${uploader}/${id}-${filename}`
+    return await storeFS({stream, filename}, id, uploader).then(() =>
+        queries.storeProfilePicture(path, uploader))
 }
 
 
@@ -409,6 +416,12 @@ const isUserExistsType = new GraphQLObjectType({
         exists: {type: GraphQLBoolean},
     })
 })
+const UpdloadProfilePictureType = new GraphQLObjectType({
+    name: 'UpdloadProfilePicture',
+    fields: () => ({
+        uploaded: {type: GraphQLBoolean},
+    })
+})
 
 const RootQuery = new GraphQLObjectType({
     name: 'RootQueryType',
@@ -693,6 +706,19 @@ const Mutation = new GraphQLObjectType({
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
                 return await processUpload(args.file, args.profile, id)
+            }
+        },
+        uploadProfilePicture: {
+            type: UpdloadProfilePictureType,
+            args: {
+                file: {type: GraphQLUpload},
+            },
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                if (await processProfilePicture(args.file, id)) {
+                    return true
+                }
+                return false
             }
         },
     }
