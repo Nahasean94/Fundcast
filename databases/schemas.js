@@ -1,148 +1,105 @@
 'use strict'
+
+/**
+ *
+ * This file contains the schemas (tables) that will be used to store various data
+ */
+//import the mongoose library to help us create javascript objects which are used to define schemas and also hold various data types
 const mongoose = require('mongoose')
-//TODO add validation
+
+/**
+ *
+ * In mongoose, a schema represents the structure of a particular document, either completely or just a portion of the document. It's a way to express expected properties and values as well as constraints and indexes. A model defines a programming interface for interacting with the database (read, insert, update, etc). So a schema answers "what will the data in this collection look like?" and a model provides functionality like "Are there any records matching this query?" or "Add a new document to the collection".
+
+ In straight RDBMS, the schema is implemented by DDL statements (create table, alter table, etc), whereas there's no direct concept of a model, just SQL statements that can do highly flexible queries (select statements) as well as basic insert, update, delete operations.
+
+ Another way to think of it is the nature of SQL allows you to define a "model" for each query by selecting only particular fields as well as joining records from related tables together.
+
+ *
+ */
+//declare the Schema object. Each Schema object represents the equivalent of table in mysql
 const Schema = mongoose.Schema
-//TODO apparently, mongodb ignores any fields that are not filled. Use some validation to autopopulate these details and give a default value.
+
+//create the Person Schema (Person table)
 const PersonSchema = new Schema({
-    first_name: String,
-    last_name: String,
     username: String,
     email: {
         type: String,
-        unique:[true,"email already exists"],
+        unique: [true, "email already exists"],
         required: [true, 'Email is a required field']
-    },
-    cellphone: {
-        type: Number,
-        default: 0
     },
     password: {
         type: String,
         required: [true, 'Password is a required field']
     },
-    birthday: {
-        type: Date,
-        required: [true, 'Date of birth is a required field']
-    },
-    twinpals: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Person',
-        date_twinpalled: {type: Date}
-
-    }],
     profile_picture: String,
-    twinpal_requests: [{
-        from: {
+    address: String,//ethereum address
+    role:{
+        type:String,
+        required:[true,"role is required"],
+        enum:["system","podcaster","listener"]
+    },
+    timestamp: Date,
+
+})
+//create the Podcasts Schema (Podcasts table)
+const PodcastSchema = new Schema({
+    title: {
+        type: String,
+        required: [true, "Podcast title is required"]
+    },
+    description: String,
+    timestamp: Date,
+    listens: {
+        type: Number,
+        default: 0,
+    },
+    podcasters: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Person'
+    }],
+    likes: [{
+        liked_by: {
             type: Schema.Types.ObjectId,
             ref: 'Person'
         },
-        timestamp: {
-            type: Date
-        }
+        timestamp: Date,
     }],
-    location: {
+    category: [{
         type: String,
-        default: ''
-    },
-    groups_member: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Group'
     }],
-    groups_admin: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Group'
-    }],
-    pages_liked: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Page'
-    }],
-    posts: [{type: Schema.Types.ObjectId, ref: 'Posts'}],
-    date_joined: {
-        type: Date,
-
-    },
-    uploads: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Upload'
-    }],
-    shares: [{
-        post: {
-            type: Schema.Types.ObjectId,
-            ref: 'Person.posts'
-        }
-    }],
-    liked_posts: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Post'
-    }]
-})
-const PostSchema = new Schema({
-    body: {
-        type: String,
-    },
-    timestamp: {
-        type: Date
-    },
-    author: {
-        type: Schema.Types.ObjectId,
-        ref: 'Person'
-    },
-    comments:[ {
-        type: Schema.Types.ObjectId,
-        ref: 'Comment'
-    }],
-
-    //TODO show a count of all likes,views,etc when shared. Keep a link to the original poster
-    likes:
-        [{
-            liked_by: {
-                type: Schema.Types.ObjectId,
-                ref: 'Person'
-            },
-            timestamp: {
-                type: Date,
-                //TODO make all timestamps required
-            }
-        }],
-    //TODO you must like a post before sharing it
-    shares:
-        [
-            {
-                shared_by: {
-                    type: Schema.Types.ObjectId,
-                    ref: 'Person'
-                },
-                timestamp: {
-                    date: Date,
-                }
-            }],
-    scope:
-        {
-            type: String,
-            enum:
-                ['twinpals', 'public', 'private', 'followers', 'following'],
-            default:
-                'public'
-        }
-    ,
-//TODO add conditional presave and post saved to track edit history
     status: {
         type: String,
         enum:
             ['original', 'edited', 'deleted']
     },
-//TODO look for a way to reference a sub document within another sub document of the same parent
     uploads: [{
         type: Schema.Types.ObjectId,
         ref: 'Upload'
     }],
-    profile:{
-        type:Schema.Types.Object,
-        ref:'Person',
-        required:[true,'Profile is a required field']
+    payment: {
+        paid: {
+            type: Boolean,
+            required: [true, "paid is required. (either 'true' or 'false')"]
+        },
+        amount: Number,
+        buyers: [{
+            buyer: {
+                type: Schema.Types.ObjectId,
+                ref: 'Person'
+            },
+            timestamp: Date,
+            amount: Number,
+
+        }]
     }
 })
+//create the Uploads Schema (Uploads table)
 const UploadSchema = new Schema({
+    caption:{
+        type:String,
+        required:[true,"caption is a required field"]
+    },
     path: {
         type: String,
         unique: true,
@@ -157,53 +114,7 @@ const UploadSchema = new Schema({
         type: Date,
     }
 })
-const GroupSchema = new Schema({
-    name: String,
-    // members:[ObjectID],
-    // admin:[ObjectID],
-})
-const AdminSchema = new Schema({
-    //TODO Restrict admins to devices,networks, logged in only in one device etc
-    email: {
-        type: String,
-        unique: true,
-        required: [true, 'Email is required']
-    },
-    email2: {
-        type: String,
-        unique: true,
-        required: [true, 'Email 2 is required']
-    },
-    cellphone: {
-        type: Number,
-        unique: true,
-        required: [true, 'Phone number is required']
-    },
-    username: {
-        type: String,
-        required: [true, 'Username is required']
-    },
-    password: {
-        type: String,
-        required: [true, 'Email is required']
-    },
-    // role: {
-    //     type: String,
-    //     required: [true, 'Role is required'],
-    //     enum: ['system']
-    // },
-    date_assigned: {
-        type: Date,
-    }
-})
-const PageSchema = new Schema({
-    name: String,
-    timestamp: String,
-    likes: [{
-        // fan:ObjectID,
-        timestamp: Date
-    }]
-})
+//create the Comments Schema (Comments table)
 const CommentSchema = new Schema({
     author: {
         type: Schema.Types.ObjectId,
@@ -213,9 +124,9 @@ const CommentSchema = new Schema({
         type: String,
         required: [true, 'Tell others about your new post']
     },
-    post: {
+    podcast: {
         type: Schema.Types.ObjectId,
-        ref: 'Post',
+        ref: 'Podcast',
     },
     replies: [{
         author: {
@@ -235,7 +146,7 @@ const CommentSchema = new Schema({
                 type: Schema.Types.ObjectId,
                 ref: 'Person'
             },
-            timestamp:Date,
+            timestamp: Date,
         }]
     }],
     timestamp: {
@@ -247,15 +158,15 @@ const CommentSchema = new Schema({
     }]
 })
 
+/**
+ *
+ * Create models from the above schemas.
+ */
 const Person = mongoose.model('Person', PersonSchema)
-// const Post = mongoose.model('Post', PostSchema)
-// const FriendRequest = mongoose.model('FriendRequest', FriendRequestSchema)
-const Group = mongoose.model('Group', GroupSchema)
-const Page = mongoose.model('Page', PageSchema)
 const Comment = mongoose.model('Comment', CommentSchema)
-const Admin = mongoose.model('Admin', AdminSchema)
-const Post = mongoose.model('Post', PostSchema)
+const Podcast = mongoose.model('Podcast', PodcastSchema)
 const Upload = mongoose.model('Upload', UploadSchema)
+//export the above models to used in other files
 module.exports = {
-    Person, Group, Page, Comment, Admin, Upload, Post
+    Person, Comment, Upload, Podcast
 }

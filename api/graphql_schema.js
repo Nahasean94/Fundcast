@@ -1,12 +1,17 @@
+/***
+ *
+ * This file contains all the graphql queries and mutations. These are responsible for receiving and responding to requests from the front end.
+ */
+
 const queries = require('../databases/queries')
-const {GraphQLObjectType, GraphQLString, GraphQLSchema, GraphQLID, GraphQLInt, GraphQLList, GraphQLBoolean, GraphQLScalarType} = require('graphql')
-const {GraphQLUpload} = require('apollo-upload-server')
-const authentication = require('./middleware/authenticate')
-const fs = require('fs')
-const mkdirp = require('mkdirp')
-const shortid = require('shortid')
+const {GraphQLObjectType, GraphQLString, GraphQLSchema, GraphQLID, GraphQLInt, GraphQLList, GraphQLBoolean,} = require('graphql')//import various modules from graphql
+const {GraphQLUpload} = require('apollo-upload-server')//this module will help us upload files to the server
+const authentication = require('./middleware/authenticate')//this module helps us authenticate various requests since multiple people with different access levels use the system
+const fs = require('fs')//this will help us create and manipulate the file system
+const mkdirp = require('mkdirp')//will help use create new folders
+const shortid = require('shortid')//will help us name each upload uniquely
 
-
+//Store the upload
 const storeFS = ({stream, filename}, id, uploader) => {
     const uploadDir = `./public/uploads/${uploader}`
 
@@ -27,14 +32,15 @@ const storeFS = ({stream, filename}, id, uploader) => {
             .on('finish', () => resolve())
     )
 }
-
+//process the upload and also store the path in the database
 const processUpload = async (upload, profile, uploader) => {
     const id = shortid.generate()
-    const {stream, filename,} = await upload
+    const {stream, filename,} = await upload.file
     const path = `${uploader}/${id}-${filename}`
     return await storeFS({stream, filename}, id, uploader).then(() =>
-        queries.saveUploads(path, profile, uploader))
+        queries.storeUpload(path, upload.caption, uploader))
 }
+//process the profile picture
 const processProfilePicture = async (upload, uploader) => {
     const id = shortid.generate()
     const {stream, filename,} = await upload
@@ -48,204 +54,84 @@ const PersonType = new GraphQLObjectType({
     name: 'Person',
     fields: () => ({
         id: {type: GraphQLID},
-        first_name: {type: GraphQLString},
-        last_name: {type: GraphQLString},
         username: {type: GraphQLString},
         email: {type: GraphQLString},
-        cellphone: {type: GraphQLInt},
-        birthday: {type: GraphQLString},
+        role: {type: GraphQLString},
         profile_picture: {type: GraphQLString},
-        location: {type: GraphQLString},
         date_joined: {type: GraphQLString},
-        twinpals: {
-            type: new GraphQLList(PersonType),
-            async resolve(parent, args) {
-                return await queries.findTwinpals(parent)
-            }
-        },
-        groups_member: {
-            type: new GraphQLList(GroupType),
-            resolve(parent, args) {
-
-            }
-        },
-        groups_admin: {
-            type: new GraphQLList(GroupType),
-            resolve(parent, args) {
-
-            }
-        },
-        pages_liked: {
-            type: new GraphQLList(PageType),
-            resolve(parent, args) {
-
-            }
-        },
-        posts: {
-            type: new GraphQLList(PostType),
-            async resolve(parent, args) {
-                return await queries.findUserPosts(parent).then(async userPosts => {
-                    const {posts} = userPosts
-                    if (posts.length > 0) {
-                        return await posts.map(async post => await queries.findPost({id: post}))
-                    }
-                    return posts
-                })
-            }
-        },
-        // uploads: {
-        //     type: new GraphQLList(UploadType),
-        //     async resolve(parent, args) {
-        //         return await queries.findUserUploads(parent).then(async userUploads => {
-        //             const {uploads} = userUploads
-        //             if (uploads.length > 0) {
-        //                 return await uploads.map(async upload => await queries.findUpload({id: uploads}))
-        //             }
-        //             return uploads
-        //         })
-        //     }
-        // },
-        shares: {
-            type: new GraphQLList(SharedPostsType),
-            resolve(parent, args) {
-
-            }
-        },
-        liked_posts: {
-            type: new GraphQLList(LikedPostsType),
-            async resolve(parent, args) {
-                return await queries.findLikedPosts(parent).then(async likedPosts => {
-                    const {liked_posts} = likedPosts
-                    if (liked_posts.length > 0) {
-                        return await liked_posts.map(async post => await queries.findPost({id: liked_posts}))
-                    }
-                    return liked_posts
-                })
-            }
-        },
-        twinpal_requests: {
-            type: new GraphQLList(TwinpalRequestType),
-            resolve(parent, args) {
-
-            }
-        },
+        address: {type: GraphQLString},
     })
 })
-const TwinpalRequestType = new GraphQLObjectType({
-    name: 'TwinpalRequest',
-    fields: () => ({
-        id: {type: GraphQLID},
-        from: {
-            type: PersonType,
-            resolve(parent, args) {
 
-            }
-        },
-        timestamp: {type: GraphQLString},
-    })
-})
-const LikedPostsType = new GraphQLObjectType({
-    name: 'LikedPosts',
-    fields: () => ({
-        id: {type: GraphQLID},
-        post: {
-            type: new GraphQLList(PostType),
-            resolve(parent, args) {
-
-            }
-        },
-        timestamp: {type: GraphQLString},
-    })
-})
-const SharedPostsType = new GraphQLObjectType({
-    name: 'SharedPosts',
-    fields: () => ({
-        id: {type: GraphQLID},
-        post: {
-            type: new GraphQLList(PostType),
-            resolve(parent, args) {
-
-            }
-        },
-        timestamp: {type: GraphQLString},
-    })
-})
-const PostLikesType = new GraphQLObjectType({
-    name: 'PostLikes',
-    fields: () => ({
-        id: {type: GraphQLID},
-        liked_by: {
-            type: PersonType,
-            resolve(parent, args) {
-
-            }
-        },
-        timestamp: {type: GraphQLString},
-    })
-})
-const PostSharesType = new GraphQLObjectType({
-    name: 'PostShares',
-    fields: () => ({
-        id: {type: GraphQLID},
-        shared_by: {
-            type: PersonType,
-            resolve(parent, args) {
-
-            }
-        },
-        timestamp: {type: GraphQLString},
-    })
-})
 const UploadType = new GraphQLObjectType({
     name: 'Uploads',
     fields: () => ({
         id: {type: GraphQLID},
         uploader: {
             type: PersonType,
-            resolve(parent, args) {
-
-            }
         },
         path: {type: GraphQLString},
         timestamp: {type: GraphQLString},
     })
 })
-const PostType = new GraphQLObjectType({
-    name: 'Post',
+const BuyerType = new GraphQLObjectType({
+    name: 'Payment',
     fields: () => ({
         id: {type: GraphQLID},
-        body: {type: GraphQLString},
-        author: {
-            type: PersonType,
+        buyer: {
+            type: GraphQLID
+        },
+        timestamp: GraphQLString,
+        amount: GraphQLInt,
+    })
+})
+
+const PaymentType = new GraphQLObjectType({
+    name: 'Payment',
+    fields: () => ({
+        id: {type: GraphQLID},
+        paid: {
+            type: GraphQLBoolean,
+        },
+        amount: {type: GraphQLInt},
+        timestamp: {type: GraphQLString},
+        buyers: {
+            type: BuyerType,
+            async resolve(parent, args) {
+               // return await queries.findPodcastPayments(parent).then(async likers => {
+               //      const {likes} = likers
+               //      return likes
+               //  })
+            }
+        }
+    })
+})
+const PodcastType = new GraphQLObjectType({
+    name: 'Podcast',
+    fields: () => ({
+        id: {type: GraphQLID},
+        description: {type: GraphQLString},
+        category: {type: GraphQLString},
+        listens: {type: GraphQLInt},
+        podcasters: {
+            type: new GraphQLList(PersonType),
             resolve(parent, args) {
                 return queries.findUser({id: parent.author})
-            }
-        },
-        shares: {
-            type: new GraphQLList(PostSharesType),
-            resolve(parent, args) {
-
             }
         },
         likes: {
             type: new GraphQLList(LikeType),
             async resolve(parent, args) {
-                return await queries.findPostLikes(parent).then(async likers => {
+                return await queries.findPodcastLikes(parent).then(async likers => {
                     const {likes} = likers
                     return likes
                 })
             }
         },
-        profile: {
-            type: PersonType,
-            async resolve(parent, args) {
-                return await queries.findUser({id: parent.profile})
-            }
-        },
         uploads: {
             type: new GraphQLList(UploadType),
             async resolve(parent, args) {
-                return await queries.findPostUploads(parent).then(async postUploads => {
+                return await queries.findPodcastUploads(parent).then(async postUploads => {
                     const {uploads} = postUploads
                     if (uploads.length > 0) {
                         return await uploads.map(async upload => {
@@ -257,14 +143,12 @@ const PostType = new GraphQLObjectType({
 
             }
         },
-        scope: {type: GraphQLString},
-        status: {type: GraphQLString},
+
         timestamp: {type: GraphQLString},
-        //TODO add comments
         comments: {
             type: new GraphQLList(CommentType),
             async resolve(parent, args) {
-                return await queries.findPostComments(parent).then(async postComments => {
+                return await queries.findPodcastComments(parent).then(async postComments => {
                     const {comments} = postComments
                     const populatedComments = []
                     if (comments.length > 0) {
@@ -277,49 +161,9 @@ const PostType = new GraphQLObjectType({
 
             }
         },
-    })
-})
-const GroupType = new GraphQLObjectType({
-    name: 'Group',
-    fields: () => ({
-        id: {type: GraphQLID},
-        name: {type: GraphQLString},
-        members: {
-            type: new GraphQLList(PersonType),
-            resolve(parent, args) {
-
-            }
-        },
-        admins: {
-            type: new GraphQLList(PersonType),
-            resolve(parent, args) {
-
-            }
-        },
-        timestamp: {type: GraphQLString},
-    })
-})
-const AdminType = new GraphQLObjectType({
-    name: 'Admin',
-    fields: () => ({
-        id: {type: GraphQLID},
-        username: {type: GraphQLString},
-        email1: {type: GraphQLString},
-        email2: {type: GraphQLString},
-        cellphone: {type: GraphQLInt},
-        members: {
-            type: new GraphQLList(PersonType),
-            resolve(parent, args) {
-
-            }
-        },
-        admins: {
-            type: new GraphQLList(PersonType),
-            resolve(parent, args) {
-
-            }
-        },
-        date_assigned: {type: GraphQLString},
+        payment:{
+            type:PaymentType
+        }
     })
 })
 const LikeType = new GraphQLObjectType({
@@ -330,20 +174,6 @@ const LikeType = new GraphQLObjectType({
             type: PersonType,
             async resolve(parent, args) {
                 return await queries.findUser({id: parent.liked_by})
-            }
-        },
-        timestamp: {type: GraphQLString},
-    })
-})
-const PageType = new GraphQLObjectType({
-    name: 'Page',
-    fields: () => ({
-        id: {type: GraphQLID},
-        name: {type: GraphQLString},
-        likes: {
-            type: new GraphQLList(LikeType),
-            resolve(parent, args) {
-
             }
         },
         timestamp: {type: GraphQLString},
@@ -381,8 +211,8 @@ const CommentType = new GraphQLObjectType({
             }
         },
         body: {type: GraphQLString},
-        post: {
-            type: PostType,
+        podcast: {
+            type: PodcastType,
             resolve(parent, args) {
 //TODO do we really need this resolver?
             }
@@ -439,50 +269,17 @@ const RootQuery = new GraphQLObjectType({
                 return queries.findAllUsers()
             }
         },
-        post: {
-            type: PostType,
+        podcast: {
+            type: PodcastType,
             args: {id: {type: GraphQLID}},
             resolve(parent, args) {
-                return queries.findPost({id: args.id})
+                return queries.findPodcast({id: args.id})
             }
         },
-        posts: {
-            type: new GraphQLList(PostType),
+        podcasts: {
+            type: new GraphQLList(PodcastType),
             resolve: () => {
-                return queries.findAllPosts()
-            }
-        },
-        fetchNewsFeed: {
-            type: new GraphQLList(PostType),
-            async resolve(parent, args, ctx) {
-                return await authentication.authenticate(ctx).then(async person => {
-                    let allPosts = []
-                    return await queries.findTwinpals(person).then(async (twinpals) => {
-                        twinpals.push({_id: person.id})
-                        for (let i = 0; i < twinpals.length; i++) {
-                            await queries.findUserPosts(twinpals[i]._id).then(async (userPosts) => {
-                                const posts = userPosts
-                                if (posts.length < 1) {
-
-                                }
-                                else {
-                                    for (let j = 0; j < posts.length; j++) {
-                                        allPosts.push(await queries.findPost({id: posts[j]}))
-                                        // allPosts.push(await this.post({id:posts[i]}))
-                                    }
-                                }
-
-                            }).catch(function (err) {
-                                console.log(err)
-                            })
-                        }
-                        return allPosts
-                    }).catch(function (err) {
-                        return {error: err}
-                    })
-
-                })
-
+                return queries.findAllPodcasts()
             }
         },
         getProfileInfo: {
@@ -493,31 +290,30 @@ const RootQuery = new GraphQLObjectType({
                 })
             }
         },
-        fetchPalProfile: {
+        fetchUserProfile: {
             type: PersonType,
             args: {id: {type: GraphQLID}},
             async resolve(parent, args, ctx) {
-
                 return await queries.findUser({id: args.id})
             }
         },
-        fetchProfilePosts: {
-            type: new GraphQLList(PostType),
+        fetchProfilePodcasts: {
+            type: new GraphQLList(PodcastType),
             async resolve(parent, args, ctx) {
                 return await authentication.authenticate(ctx).then(async person => {
-                    let allPosts = []
-                    return await queries.findUserPosts(person.id).then(async (userPosts) => {
-                        const posts = userPosts
-                        if (posts.length < 1) {
-
+                    let allPodcasts = []
+                    return await queries.findUserPodcasts(person.id).then(async (userPodcasts) => {
+                        const podcasts = userPodcasts
+                        if (podcasts.length < 1) {
+//todo sth
                         }
                         else {
-                            for (let j = 0; j < posts.length; j++) {
-                                allPosts.push(await queries.findPost({id: posts[j]}))
+                            for (let j = 0; j < podcasts.length; j++) {
+                                allPodcasts.push(await queries.findPodcast({id: podcasts[j]}))
                             }
                         }
                     }).then(() => {
-                        return allPosts
+                        return allPodcasts
                     }).catch(function (err) {
                         console.log(err)
                     })
@@ -525,24 +321,24 @@ const RootQuery = new GraphQLObjectType({
 
             }
         },
-        fetchPalPosts: {
-            type: new GraphQLList(PostType),
-            args: {id: {type: GraphQLID}},
+        fetchUserPodcasts: {
+            type: new GraphQLList(PodcastType),
+            args: {idn: {type: GraphQLID}},
             async resolve(parent, args, ctx) {
                 return await authentication.authenticate(ctx).then(async person => {
-                    let allPosts = []
-                    return await queries.findUserPosts(args.id).then(async (userPosts) => {
-                        const posts = userPosts
-                        if (posts.length < 1) {
+                    let allPodcasts = []
+                    return await queries.findUserPodcasts(args.id).then(async (userPodcasts) => {
+                        const podcasts = userPodcasts
+                        if (podcasts.length < 1) {
 
                         }
                         else {
-                            for (let j = 0; j < posts.length; j++) {
-                                allPosts.push(await queries.findPost({id: posts[j]}))
+                            for (let j = 0; j < podcasts.length; j++) {
+                                allPodcasts.push(await queries.findPodcast({id: podcasts[j]}))
                             }
                         }
                     }).then(() => {
-                        return allPosts
+                        return allPodcasts
                     }).catch(function (err) {
                         console.log(err)
                     })
@@ -585,11 +381,10 @@ const Mutation = new GraphQLObjectType({
         signup: {
             type: PersonType,
             args: {
-                first_name: {type: GraphQLString},
-                last_name: {type: GraphQLString},
+                username: {type: GraphQLString},
                 email: {type: GraphQLString},
                 password: {type: GraphQLString},
-                birthday: {type: GraphQLString},
+                role: {type: GraphQLString},
             },
             async resolve(parent, args, ctx) {
                 return await queries.signup(args).then(person => {
@@ -601,11 +396,10 @@ const Mutation = new GraphQLObjectType({
             type: PersonType,
             args: {
                 id: {type: GraphQLID},
-                first_name: {type: GraphQLString},
-                last_name: {type: GraphQLString},
                 username: {type: GraphQLString},
                 email: {type: GraphQLString},
-                birthday: {type: GraphQLString},
+                password: {type: GraphQLString},
+                role: {type: GraphQLString},
             },
             async resolve(parent, args, ctx) {
                 return await authentication.authenticate(ctx).then(async ({id}) => {
@@ -615,62 +409,62 @@ const Mutation = new GraphQLObjectType({
                 })
             }
         },
-        likePost: {
-            type: PostType,
+        likePodcast: {
+            type: PodcastType,
             args: {
                 id: {type: GraphQLID},
             },
             async resolve(parent, args, ctx) {
                 return await authentication.authenticate(ctx).then(async ({id}) => {
-                    return await queries.likePost(id, args.id).then(post => {
-                        return post
+                    return await queries.likePodcast(id, args.id).then(podcast => {
+                        return podcast
                     })
                 })
             }
         },
-        unlikePost: {
-            type: PostType,
+        unlikePodcast: {
+            type: PodcastType,
             args: {
                 id: {type: GraphQLID},
             },
             async resolve(parent, args, ctx) {
                 return await authentication.authenticate(ctx).then(async ({id}) => {
-                    return await queries.unlikePost(id, args.id).then(post => {
-                        return post
+                    return await queries.unlikePodcast(id, args.id).then(podcast => {
+                        return podcast
                     })
                 })
             }
         },
-        updatePost: {
-            type: PostType,
+        updatePodcast: {
+            type: PodcastType,
             args: {
                 id: {type: GraphQLID},
                 body: {type: GraphQLString},
             },
             async resolve(parent, args, ctx) {
                 return await authentication.authenticate(ctx).then(async ({id}) => {
-                    return await queries.updatePost(args).then(post => {
-                        return post
+                    return await queries.updatePodcast(args).then(podcast => {
+                        return podcast
                     })
                 })
             }
         },
-        deletePost: {
-            type: PostType,
+        deletePodcast: {
+            type: PodcastType,
             args: {
                 id: {type: GraphQLID},
                 body: {type: GraphQLString},
             },
             async resolve(parent, args, ctx) {
                 return await authentication.authenticate(ctx).then(async ({id}) => {
-                    return await queries.deletePost(id, args.id).then(post => {
-                        return post
+                    return await queries.deletePodcast(id, args.id).then(podcast => {
+                        return podcast
                     })
                 })
             }
         },
         addComment: {
-            type: PostType,
+            type: PodcastType,
             args: {
                 post_id: {type: GraphQLID},
                 comment: {type: GraphQLString},
@@ -683,29 +477,31 @@ const Mutation = new GraphQLObjectType({
                 })
             }
         },
-        newPost: {
-            type: PostType,
+        newPodcast: {
+            type: PodcastType,
             args: {
-                body: {type: GraphQLString},
-                profile: {type: GraphQLID},
+                title: {type: GraphQLString},
+                description: {type: GraphQLString},
+                uploads: {type:new GraphQLList(GraphQLString)},
+
             },
             async resolve(parent, args, ctx) {
                 return await authentication.authenticate(ctx).then(async ({id}) => {
-                    return await queries.createNewPost(id, args).then(post => {
-                        return post
+                    return await queries.createNewPodcast(id, args).then(podcast => {
+                        return podcast
                     })
                 })
             }
         },
         uploadFile: {
-            type: PostType,
+            type: PodcastType,
             args: {
                 file: {type: GraphQLUpload},
-                profile: {type: GraphQLID},
+                caption: {type: GraphQLString},
             },
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
-                return await processUpload(args.file, args.profile, id)
+                return await processUpload(args, id)
             }
         },
         uploadProfilePicture: {
@@ -715,10 +511,9 @@ const Mutation = new GraphQLObjectType({
             },
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
-                if (await processProfilePicture(args.file, id)) {
-                    return true
-                }
-                return false
+                return !!(await processProfilePicture(args.file, id));
+            }
+
             }
         },
     }

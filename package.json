@@ -1,5 +1,5 @@
 {
-  "name": "twinpal",
+  "name": "fundcast",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -43,6 +43,7 @@
     "promise-all": "^1.0.0",
     "raw-body": "^2.3.2",
     "requirejs": "^2.3.5",
+    "rxjs": "^6.2.1",
     "save-file": "^1.2.0",
     "shortid": "^2.2.8",
     "socket.io": "^2.1.0",

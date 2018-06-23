@@ -24,16 +24,6 @@ module.exports = {
                         id: decoded.id,
                         birthday: decoded.birthday
                     }
-                    // return await Person.findById(decoded.id).select('_id username birthday profile_picture first_name last_name email').exec().then(async function (user) {
-                    //     if (!user) {
-                    //         return {error: 'No such user'}
-                    //     }
-                    //     else {
-                    //         return user
-                    //     }
-                    // }).catch(function (err) {
-                    //     return {error: err}
-                    // })
                 }
             })
         } else {
@@ -42,7 +32,7 @@ module.exports = {
     },
     login: async (args) => {
         const {email, password} = args
-        return await Person.findOne({email: email}).select('email password username birthday').exec().then(function (person) {
+        return await Person.findOne({email: email}).select('email password username role').exec().then(function (person) {
             if (person) {
                 if (bcrypt.compareSync(password, person.password)) {
                     return {
@@ -51,7 +41,7 @@ module.exports = {
                             id: person._id,
                             email: person.email,
                             username: person.username,
-                            birthday: person.birthday,
+                            role: person.role,
                         }, config.jwtSecret),
                         error: null
                     }
@@ -70,7 +60,7 @@ module.exports = {
         }).catch(function (err) {
             return { ok:false,
                 token: null,
-                error: err}//TODO remove this error and provide more robust error handling
+                error: err}
         })
     }
 }

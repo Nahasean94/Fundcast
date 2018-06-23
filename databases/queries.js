@@ -1,95 +1,75 @@
 /**
- * This file contains database queries
+ * This file contains database queries. We use the schemas defined in the schemas to CRUD within MongoDB
  */
 
-/**     --USER--
-
- * unlikeComment
- *updateComment
- *getComments
- getUploads
- *removeProfilePicture
- *
- deleteComment
- *deactivateAccount
- *    --ADMIN--
- *authenticate
- * sign up
- */
 "use strict"
-const {Person, Group, Page, Comment, Admin, Upload, Post} = require('./schemas')
-const mongoose = require('mongoose')
-const bcrypt = require('bcrypt')
+const {Person,  Comment, Upload, Podcast} = require('./schemas')//import various models
+const mongoose = require('mongoose')//import mongoose library
+const bcrypt = require('bcrypt')//import bcrypt to assist hashing passwords
 //Connect to Mongodb
-//TODO add username and password
-mongoose.connect('mongodb://localhost/practice', {promiseLibrary: global.Promise})
+
+mongoose.connect('mongodb://localhost/fundcast', {promiseLibrary: global.Promise})
 
 const queries = {
-    deleteAccount: async function (ctx) {
-        //TODO make all the content uploaded by these people to be anonymous
-        return await Person.findByIdAndRemove({_id: ctx.session.user_id}).exec()
-    },
-    deleteUpload: async function (ctx, upload_id) {
-        return await Person.findOneAndUpdate({_id: ctx.session.user_id}, {$pull: {uploads: upload_id}}).exec().then(async function (pulled) {
-            await Upload.findByIdAndRemove({_id: upload_id}).exec().then(async function (removed) {
-                fs.unlink(`./public/uploads/${removed.path}`, () => {
-                    //TODO notify the user that its deleted
-                })
-            })
-        })
-    },
-    deletePost: async function (author, post_id) {
-        Comment.remove({post: post_id}).exec()
-        Person.findOneAndUpdate({_id: author}, {$pull: {posts: post_id}}).exec()
-        return await Post.findByIdAndRemove({_id: post_id}).exec()
+    // deleteAccount: async function (ctx) {
+    //     //TODO make all the content uploaded by these people to be anonymous
+    //     return await Person.findByIdAndRemove({_id: ctx.session.user_id}).exec()
+    // },
+    // deleteUpload: async function (ctx, upload_id) {
+    //     return await Person.findOneAndUpdate({_id: ctx.session.user_id}, {$pull: {uploads: upload_id}}).exec().then(async function (pulled) {
+    //         await Upload.findByIdAndRemove({_id: upload_id}).exec().then(async function (removed) {
+    //             fs.unlink(`./public/uploads/${removed.path}`, () => {
+    //                 //TODO notify the user that its deleted
+    //             })
+    //         })
+    //     })
+    // },
+    deletePodcast: async function (author, podcast_id) {
+        Comment.remove({podcast: podcast_id}).exec()
+        Person.findOneAndUpdate({_id: author}, {$pull: {podcasts: podcast_id}}).exec()
+        return await Podcast.findByIdAndRemove({_id: podcast_id}).exec()
 
     },
-    storeUpload: async function (path, uploader) {
+    storeUpload: async function (path,caption,uploader) {
         return await new Upload({
             path: path,
             uploader: uploader,
-            timestamp: new Date()
+            timestamp: new Date(),
+            caption:caption,
         }).save()
     },
     updateProfile: async function (id, profile) {
-        //TODO record the date profile was updated
+
         return await Person.findOneAndUpdate({_id: id}, {
-            first_name: profile.first_name,
-            last_name: profile.last_name,
             username: profile.username,
             email: profile.email,
-            // cellphone: profile.cellphone,
-            birthday: profile.birthday,
-            // location: profile.location
+
         }).exec()
     },
     storeComment: async function (author, comment) {
-        //TODO look for a way to only receive data from one form
-
         return await new Comment({
             author: author,
             body: comment.comment,
-            post: comment.post_id,
+            podcast: comment.podcast_id,
             timestamp: new Date()
         }).save().then(savedComment => {
-            return Post.findOneAndUpdate({_id: comment.post_id}, {
+            return Podcast.findOneAndUpdate({_id: comment.podcast_id}, {
                 $push: {
                     comments: savedComment._id
                 }
             }, {new: true}).exec()
         })
     },
-    updatePost: async function (post) {
-        return await Post.findOneAndUpdate({
-            _id: post.id
+    updatePodcast: async function (podcast) {
+        return await Podcast.findOneAndUpdate({
+            _id: podcast.id
         }, {
-            body: post.body,
+            body: podcast.body,
             status: 'edited',
             timestamp: new Date()
         }, {new: true}).exec()
     },
     likeComment: async function (ctx, id) {
-        //TODO provide feedback on the front end
         return await Comment.findOneAndUpdate({
             _id: id,
             author: {$ne: ctx.currentUser.id},
@@ -103,9 +83,8 @@ const queries = {
             }
         }, {new: true}).exec()
     },
-    unlikePost: async function (unliker, id) {
-        //TODO provide feedback on the front end
-        return await Post.findOneAndUpdate({
+    unlikePodcast: async function (unliker, id) {
+        return await Podcast.findOneAndUpdate({
             _id: id
         }, {
             $pull: {
@@ -115,10 +94,9 @@ const queries = {
             }
         }, {new: true}).exec()
     },
-    likePost: async function (liker, id) {
-        //TODO provide feedback on the front end
+    likePodcast: async function (liker, id) {
         console.log(liker, id)
-        return await Post.findOneAndUpdate({
+        return await Podcast.findOneAndUpdate({
             _id: id,
             author: {$ne: liker},
             'likes.liked_by': {$ne: liker}
@@ -132,54 +110,48 @@ const queries = {
             }
         }, {new: true}).exec()
     },
-    createNewPost: async function (author, post) {
+    createNewPodcast: async function (author, podcast) {
 
-        const body = post.body
-        const profile = post.profile
+        const body = podcast.body
+        const profile = podcast.profile
 
         if (body !== '') {
-            return await new Post({
+            return await new Podcast({
                 body: body,
                 author: author,
                 status: 'original',
                 timestamp: new Date(),
                 profile: profile
-            }).save({new: true}).then(async function (post) {
+            }).save({new: true}).then(async function (podcast) {
                 Person.findOneAndUpdate({
                     _id: author
-                }, {$push: {posts: post._id}}).exec()
-                return post
+                }, {$push: {podcasts: podcast._id}}).exec()
+                return podcast
             }).catch(function (err) {
                 console.log(err)
             })
         }
     },
-    saveUploads: async function (path, profile, uploader) {
-        return await this.storeUpload(path, uploader).then(async upload => {
-            //add the upload to the uploader's document
-            Person.findOneAndUpdate({
-                _id: uploader
-            }, {$push: {uploads: upload._id}}).exec()
-            //create a new post of the uploaded file
-            const post = await new Post({
-                body: '',
-                author: uploader,
-                status: 'original',
-                timestamp: new Date(),
-                profile: profile,
-                uploads: upload._id
-
-            }).save()
-            Person.findOneAndUpdate({
-                _id: uploader
-            }, {$push: {posts: post._id}}).exec()
-            return post
-        })
-    },
+    // saveUploads: async function (path, profile, uploader) {
+    //     return await this.storeUpload(path, uploader).then(async upload => {
+    //         //create a new podcast of the uploaded file
+    //       return await new Podcast({
+    //             body: '',
+    //             author: uploader,
+    //             status: 'original',
+    //             timestamp: new Date(),
+    //             profile: profile,
+    //             uploads: upload._id
+    //
+    //         }).save()
+    //
+    //         return podcast
+    //     })
+    // },
     viewTwinpal: async function (id) {
         return Person.findOne({
             '_id': id
-        }).select('first_name last_name profile_picture posts').exec()
+        }).select('first_name last_name profile_picture podcasts').exec()
     }
     ,
     signup: async function (userInfo) {
@@ -195,12 +167,12 @@ const queries = {
         }).save()
     }
     ,
-// findComments: async function (post_id) {
-//     return await Comment.find({post: post_id}).select('author body timestamp').exec()
+// findComments: async function (podcast_id) {
+//     return await Comment.find({podcast: podcast_id}).select('author body timestamp').exec()
 //
 // },
-    findPosts: async function (ctx) {
-        return await Post.find({
+    findPodcasts: async function (ctx) {
+        return await Podcast.find({
             $or: [{
                 author: ctx.currentUser.id,
             },
@@ -209,9 +181,9 @@ const queries = {
                 }]
         }).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').limit(2).exec()
     },
-    findUserPosts: async function (args) {
-        // return await Person.findById(args).select("posts").sort({timestamp: -1}).exec()
-        return await Post.find({
+    findUserPodcasts: async function (args) {
+        // return await Person.findById(args).select("podcasts").sort({timestamp: -1}).exec()
+        return await Podcast.find({
             $or: [{
                 author: args,
             },
@@ -226,7 +198,7 @@ const queries = {
     }
     ,
     fetchNewsFeed: async function (ctx) {
-        return await Post.find({
+        return await Podcast.find({
             $or: [{
                 author: id,
             },
@@ -253,32 +225,32 @@ const queries = {
         return await Person.find({}).exec()
     }
     ,
-    findAllPosts: async function () {
-        return await Post.find({}).exec()
+    findAllPodcasts: async function () {
+        return await Podcast.find({}).exec()
     }
     ,
     findAllUsers: async function () {
         return await Person.find({}).exec()
     }
     ,
-    findPost: async function (args) {
-        return await Post.findById(args.id).exec()
+    findPodcast: async function (args) {
+        return await Podcast.findById(args.id).exec()
     }
     ,
-    findPostLikes: async function (args) {
-        return await Post.findById(args._id).select('likes').exec()
+    findPodcastLikes: async function (args) {
+        return await Podcast.findById(args._id).select('likes').exec()
     }
     ,
-    findPostComments: async function (args) {
-        return await Post.findById(args._id).select('comments').exec()
+    findPodcastComments: async function (args) {
+        return await Podcast.findById(args._id).select('comments').exec()
     }
     ,
     findComment: async function (args) {
         return await Comment.findById(args.id).exec()
     }
     ,
-    findLikedPosts: async function (args) {
-        return await Person.findById(args.id).select('liked_posts').exec()
+    findLikedPodcasts: async function (args) {
+        return await Person.findById(args.id).select('liked_podcasts').exec()
     }
     ,
     findUpload: async function (args) {
@@ -293,10 +265,10 @@ const queries = {
         return await Person.findOne({email: args.email}).exec()
     }
     ,
-    findPostUploads: async function (args) {
-        return await Post.findById(args._id).select('uploads').exec()
+    findPodcastUploads: async function (args) {
+        return await Podcast.findById(args._id).select('uploads').exec()
     }
 }
 module.exports = queries
 
-//TODO add posts that a person writes, and ones written on their wall to be inside the post array of one's document(record)
+//TODO add podcasts that a person writes, and ones written on their wall to be inside the podcast array of one's document(record)
