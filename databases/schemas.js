@@ -37,7 +37,7 @@ const PersonSchema = new Schema({
     role:{
         type:String,
         required:[true,"role is required"],
-        enum:["system","podcaster","listener"]
+        enum:["system","host","listener"]
     },
     timestamp: Date,
 
@@ -54,7 +54,7 @@ const PodcastSchema = new Schema({
         type: Number,
         default: 0,
     },
-    podcasters: [{
+    hosts: [{
         type: Schema.Types.ObjectId,
         ref: 'Person'
     }],
@@ -65,7 +65,7 @@ const PodcastSchema = new Schema({
         },
         timestamp: Date,
     }],
-    category: [{
+    tags: [{
         type: String,
     }],
     status: {
@@ -73,13 +73,19 @@ const PodcastSchema = new Schema({
         enum:
             ['original', 'edited', 'deleted']
     },
-    uploads: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Upload'
-    }],
+    coverImage:{
+        type:Schema.Types.ObjectId,
+        ref:'Upload',
+        required:[true,"coverImage is a required field"]
+    },
+    audioFile:{
+        type:Schema.Types.ObjectId,
+        ref:'Upload',
+        required:[true,"audioFile is a required field"]
+    },
     payment: {
         paid: {
-            type: Boolean,
+            type: Number,
             required: [true, "paid is required. (either 'true' or 'false')"]
         },
         amount: Number,
@@ -90,7 +96,6 @@ const PodcastSchema = new Schema({
             },
             timestamp: Date,
             amount: Number,
-
         }]
     }
 })

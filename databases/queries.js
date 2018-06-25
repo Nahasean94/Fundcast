@@ -3,7 +3,7 @@
  */
 
 "use strict"
-const {Person,  Comment, Upload, Podcast} = require('./schemas')//import various models
+const {Person, Comment, Upload, Podcast} = require('./schemas')//import various models
 const mongoose = require('mongoose')//import mongoose library
 const bcrypt = require('bcrypt')//import bcrypt to assist hashing passwords
 //Connect to Mongodb
@@ -30,12 +30,12 @@ const queries = {
         return await Podcast.findByIdAndRemove({_id: podcast_id}).exec()
 
     },
-    storeUpload: async function (path,caption,uploader) {
+    storeUpload: async function (path, caption, uploader) {
         return await new Upload({
             path: path,
             uploader: uploader,
             timestamp: new Date(),
-            caption:caption,
+            caption: caption,
         }).save()
     },
     updateProfile: async function (id, profile) {
@@ -110,27 +110,20 @@ const queries = {
             }
         }, {new: true}).exec()
     },
+
     createNewPodcast: async function (author, podcast) {
+        return await new Podcast({
+           title: podcast.title,
+            description:podcast.description,
+            timestamp:podcast.timestamp,
+            hosts:podcast.hosts,
+            tags:podcast.tags,
+            status:podcast.status,
+            coverImage:podcast.coverImage,
+            audioFile:podcast.audioFile,
+            "payment.paid": podcast.paid
+        }).save()
 
-        const body = podcast.body
-        const profile = podcast.profile
-
-        if (body !== '') {
-            return await new Podcast({
-                body: body,
-                author: author,
-                status: 'original',
-                timestamp: new Date(),
-                profile: profile
-            }).save({new: true}).then(async function (podcast) {
-                Person.findOneAndUpdate({
-                    _id: author
-                }, {$push: {podcasts: podcast._id}}).exec()
-                return podcast
-            }).catch(function (err) {
-                console.log(err)
-            })
-        }
     },
     // saveUploads: async function (path, profile, uploader) {
     //     return await this.storeUpload(path, uploader).then(async upload => {
@@ -156,12 +149,10 @@ const queries = {
     ,
     signup: async function (userInfo) {
         return await new Person({
-            first_name: userInfo.first_name,
-            last_name: userInfo.last_name,
             password: bcrypt.hashSync(userInfo.password, 10),
-            birthday: userInfo.birthday,
             email: userInfo.email,
-            username: `${userInfo.first_name} ${userInfo.last_name}`,
+            username: userInfo.username,
+            role: userInfo.role,
             profile_picture: 'default.jpg',
             date_joined: new Date()
         }).save()
@@ -265,8 +256,11 @@ const queries = {
         return await Person.findOne({email: args.email}).exec()
     }
     ,
-    findPodcastUploads: async function (args) {
-        return await Podcast.findById(args._id).select('uploads').exec()
+    findPodcastFile: async function (args) {
+        return await Podcast.findById(args._id).select('podcast').exec()
+    },
+    findPodcastCoverImage: async function (args) {
+        return await Podcast.findById(args._id).select('coverImage').exec()
     }
 }
 module.exports = queries

@@ -12,7 +12,7 @@ const mkdirp = require('mkdirp')//will help use create new folders
 const shortid = require('shortid')//will help us name each upload uniquely
 
 //Store the upload
-const storeFS = ({stream, filename}, id, uploader) => {
+const storeFS = ({stream}, {filename}, id, uploader) => {
     const uploadDir = `./public/uploads/${uploader}`
 
 // Ensure upload directory exists
@@ -40,6 +40,45 @@ const processUpload = async (upload, profile, uploader) => {
     return await storeFS({stream, filename}, id, uploader).then(() =>
         queries.storeUpload(path, upload.caption, uploader))
 }
+const getMeta = async (file) => {
+    const {stream, filename} = await file
+    return {stream, filename}
+}
+const createNewPodcast = async (newPodcast, uploader) => {
+
+    const podcastId = shortid.generate()
+    const coverImageId = shortid.generate()
+
+
+    const coverImageName = async () => {
+        let {filename} = await getMeta(newPodcast.coverImage)
+        return filename
+    }
+    const podcastName =async () => {
+        let {filename} = await getMeta(newPodcast.podcast)
+        return filename
+    }
+    const podcastPath = `${uploader}/${podcastId}-${await podcastName()}`
+    const coverImagePath = `${uploader}/${coverImageId}-${await coverImageName()}`
+    const audioFile = await storeFS(await getMeta(newPodcast.podcast), await getMeta(newPodcast.podcast), podcastId, uploader).then(async () =>
+        queries.storeUpload(podcastPath, newPodcast.title, uploader))
+
+    const coverImage = await storeFS(await getMeta(newPodcast.coverImage), await getMeta(newPodcast.coverImage), coverImageId, uploader).then(async () =>
+        queries.storeUpload(coverImagePath, newPodcast.title, uploader))
+    const finalPodcast = {
+        title: newPodcast.title,
+        description: newPodcast.description,
+        timestamp: new Date(),
+        hosts: newPodcast.hosts,
+        tags: newPodcast.tags,
+        status: "original",
+        coverImage: coverImage.id,
+        audioFile: audioFile.id,
+        paid: newPodcast.paid
+    }
+    return await queries.createNewPodcast(uploader, finalPodcast)
+}
+
 //process the profile picture
 const processProfilePicture = async (upload, uploader) => {
     const id = shortid.generate()
@@ -75,14 +114,18 @@ const UploadType = new GraphQLObjectType({
     })
 })
 const BuyerType = new GraphQLObjectType({
-    name: 'Payment',
+    name: 'Buyer',
     fields: () => ({
         id: {type: GraphQLID},
         buyer: {
             type: GraphQLID
         },
-        timestamp: GraphQLString,
-        amount: GraphQLInt,
+        timestamp: {
+            type: GraphQLString
+        },
+        amount: {
+            type: GraphQLInt
+        },
     })
 })
 
@@ -98,10 +141,10 @@ const PaymentType = new GraphQLObjectType({
         buyers: {
             type: BuyerType,
             async resolve(parent, args) {
-               // return await queries.findPodcastPayments(parent).then(async likers => {
-               //      const {likes} = likers
-               //      return likes
-               //  })
+                // return await queries.findPodcastPayments(parent).then(async likers => {
+                //      const {likes} = likers
+                //      return likes
+                //  })
             }
         }
     })
@@ -110,13 +153,16 @@ const PodcastType = new GraphQLObjectType({
     name: 'Podcast',
     fields: () => ({
         id: {type: GraphQLID},
+        title: {type: GraphQLString},
         description: {type: GraphQLString},
-        category: {type: GraphQLString},
+        tags: {type: new GraphQLList(GraphQLString)},
         listens: {type: GraphQLInt},
-        podcasters: {
+        hosts: {
             type: new GraphQLList(PersonType),
             resolve(parent, args) {
-                return queries.findUser({id: parent.author})
+                return parent.hosts.map(host => {
+                    return queries.findUser({id: host})
+                })
             }
         },
         likes: {
@@ -128,23 +174,31 @@ const PodcastType = new GraphQLObjectType({
                 })
             }
         },
-        uploads: {
-            type: new GraphQLList(UploadType),
+        podcast: {
+            type: UploadType,
             async resolve(parent, args) {
-                return await queries.findPodcastUploads(parent).then(async postUploads => {
-                    const {uploads} = postUploads
-                    if (uploads.length > 0) {
-                        return await uploads.map(async upload => {
-                            return await queries.findUpload({id: upload})
-                        })
-                    }
-                    return uploads
+                return await queries.findPodcastFile(parent).then(async podcastFile => {
+                    const {podcast} = podcastFile
+                    return await queries.findUpload({id: podcast})
+
+                })
+
+            }
+        },
+        coverImage: {
+            type: UploadType,
+            async resolve(parent, args) {
+                return await queries.findPodcastCoverImage(parent).then(async podcastCoverImage => {
+                    const {coverImage} = podcastCoverImage
+                    return await queries.findUpload({id: coverImage})
+
                 })
 
             }
         },
 
         timestamp: {type: GraphQLString},
+
         comments: {
             type: new GraphQLList(CommentType),
             async resolve(parent, args) {
@@ -161,8 +215,8 @@ const PodcastType = new GraphQLObjectType({
 
             }
         },
-        payment:{
-            type:PaymentType
+        payment: {
+            type: PaymentType
         }
     })
 })
@@ -482,15 +536,18 @@ const Mutation = new GraphQLObjectType({
             args: {
                 title: {type: GraphQLString},
                 description: {type: GraphQLString},
-                uploads: {type:new GraphQLList(GraphQLString)},
-
+                hosts: {type: new GraphQLList(GraphQLString)},
+                paid: {type: GraphQLInt},
+                tags: {type: GraphQLString},
+                coverImage: {type: GraphQLUpload},
+                podcast: {type: GraphQLUpload},
             },
             async resolve(parent, args, ctx) {
-                return await authentication.authenticate(ctx).then(async ({id}) => {
-                    return await queries.createNewPodcast(id, args).then(podcast => {
-                        return podcast
-                    })
-                })
+                const {id} = await authentication.authenticate(ctx)
+                if (id) {
+                    return await createNewPodcast(args, id)
+                }
+
             }
         },
         uploadFile: {
@@ -511,12 +568,12 @@ const Mutation = new GraphQLObjectType({
             },
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
-                return !!(await processProfilePicture(args.file, id));
+                return !!(await processProfilePicture(args.file, id))
             }
 
-            }
-        },
-    }
+        }
+    },
+
 })
 
 module.exports = new GraphQLSchema({query: RootQuery, mutation: Mutation})

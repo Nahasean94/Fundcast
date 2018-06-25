@@ -5,7 +5,7 @@ const mongoose = require('mongoose')
 const bcrypt = require('bcrypt')
 
 
-mongoose.connect('mongodb://localhost/practice', {promiseLibrary: global.Promise})
+mongoose.connect('mongodb://localhost/fundcast', {promiseLibrary: global.Promise})
 
 module.exports = {
     authenticate: async (ctx) => {
@@ -16,13 +16,12 @@ module.exports = {
         }
         if (token) {
             return await jwt.verify(token, config.jwtSecret, async (err, decoded) => {
-                if (err) {
+                if (err | decoded.role !== 'host') {
                     return {error: 'Failed to authenticate'}
                 }
                 else {
                     return {
                         id: decoded.id,
-                        birthday: decoded.birthday
                     }
                 }
             })
@@ -53,14 +52,16 @@ module.exports = {
                 }
             }
             return {
-                    ok: false,
-                    token: null,
-                    error: 'No user with such credentials exists. Please check your email and password and try again.'
+                ok: false,
+                token: null,
+                error: 'No user with such credentials exists. Please check your email and password and try again.'
             }
         }).catch(function (err) {
-            return { ok:false,
+            return {
+                ok: false,
                 token: null,
-                error: err}
+                error: err
+            }
         })
     }
 }
