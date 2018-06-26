@@ -52,13 +52,7 @@ const queries = {
             body: comment.comment,
             podcast: comment.podcast_id,
             timestamp: new Date()
-        }).save().then(savedComment => {
-            return Podcast.findOneAndUpdate({_id: comment.podcast_id}, {
-                $push: {
-                    comments: savedComment._id
-                }
-            }, {new: true}).exec()
-        })
+        }).save()
     },
     updatePodcast: async function (podcast) {
         return await Podcast.findOneAndUpdate({
@@ -217,7 +211,7 @@ const queries = {
     }
     ,
     findAllPodcasts: async function () {
-        return await Podcast.find({}).exec()
+        return await Podcast.find({}).sort({timestamp:-1}).exec()
     }
     ,
     findAllUsers: async function () {
@@ -233,7 +227,7 @@ const queries = {
     }
     ,
     findPodcastComments: async function (args) {
-        return await Podcast.findById(args._id).select('comments').exec()
+        return await Comment.find({podcast:args}).sort({timestamp:-1}).exec()
     }
     ,
     findComment: async function (args) {
@@ -257,7 +251,7 @@ const queries = {
     }
     ,
     findPodcastFile: async function (args) {
-        return await Podcast.findById(args._id).select('podcast').exec()
+        return await Podcast.findById(args._id).select('audioFile').exec()
     },
     findPodcastCoverImage: async function (args) {
         return await Podcast.findById(args._id).select('coverImage').exec()

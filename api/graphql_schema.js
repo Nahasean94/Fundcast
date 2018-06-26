@@ -54,7 +54,7 @@ const createNewPodcast = async (newPodcast, uploader) => {
         let {filename} = await getMeta(newPodcast.coverImage)
         return filename
     }
-    const podcastName =async () => {
+    const podcastName = async () => {
         let {filename} = await getMeta(newPodcast.podcast)
         return filename
     }
@@ -174,12 +174,12 @@ const PodcastType = new GraphQLObjectType({
                 })
             }
         },
-        podcast: {
+        audioFile: {
             type: UploadType,
             async resolve(parent, args) {
                 return await queries.findPodcastFile(parent).then(async podcastFile => {
-                    const {podcast} = podcastFile
-                    return await queries.findUpload({id: podcast})
+                    const {audioFile} = podcastFile
+                    return await queries.findUpload({id: audioFile})
 
                 })
 
@@ -202,8 +202,8 @@ const PodcastType = new GraphQLObjectType({
         comments: {
             type: new GraphQLList(CommentType),
             async resolve(parent, args) {
-                return await queries.findPodcastComments(parent).then(async postComments => {
-                    const {comments} = postComments
+                return await queries.findPodcastComments(parent).then(async podcastComments => {
+                    const {comments} = podcastComments
                     const populatedComments = []
                     if (comments.length > 0) {
                         for (let i = comments.length - 1; i >= 0; i--) {
@@ -327,7 +327,7 @@ const RootQuery = new GraphQLObjectType({
             type: PodcastType,
             args: {id: {type: GraphQLID}},
             resolve(parent, args) {
-                return queries.findPodcast({id: args.id})
+                return queries.findPodcast(args)
             }
         },
         podcasts: {
@@ -375,9 +375,17 @@ const RootQuery = new GraphQLObjectType({
 
             }
         },
+        findPodcastComments: {
+            type:new GraphQLList(CommentType),
+            args: {podcast_id: {type: GraphQLID}},
+            async resolve(parent, args) {
+                return await queries.findPodcastComments(args.podcast_id)
+
+            }
+        },
         fetchUserPodcasts: {
             type: new GraphQLList(PodcastType),
-            args: {idn: {type: GraphQLID}},
+            args: {id: {type: GraphQLID}},
             async resolve(parent, args, ctx) {
                 return await authentication.authenticate(ctx).then(async person => {
                     let allPodcasts = []
@@ -518,9 +526,9 @@ const Mutation = new GraphQLObjectType({
             }
         },
         addComment: {
-            type: PodcastType,
+            type: CommentType,
             args: {
-                post_id: {type: GraphQLID},
+                podcast_id: {type: GraphQLID},
                 comment: {type: GraphQLString},
             },
             async resolve(parent, args, ctx) {
