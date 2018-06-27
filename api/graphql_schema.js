@@ -520,7 +520,7 @@ const Mutation = new GraphQLObjectType({
             async resolve(parent, args, ctx) {
                 return await authentication.authenticate(ctx).then(async ({id}) => {
                     return await queries.deletePodcast(id, args.id).then(podcast => {
-                        return podcast
+                        return podcastlik
                     })
                 })
             }

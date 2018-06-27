@@ -89,12 +89,9 @@ const queries = {
         }, {new: true}).exec()
     },
     likePodcast: async function (liker, id) {
-        console.log(liker, id)
         return await Podcast.findOneAndUpdate({
             _id: id,
-            author: {$ne: liker},
-            'likes.liked_by': {$ne: liker}
-
+            author: {$ne: liker}
         }, {
             $push: {
                 likes: {
@@ -107,14 +104,14 @@ const queries = {
 
     createNewPodcast: async function (author, podcast) {
         return await new Podcast({
-           title: podcast.title,
-            description:podcast.description,
-            timestamp:podcast.timestamp,
-            hosts:podcast.hosts,
-            tags:podcast.tags,
-            status:podcast.status,
-            coverImage:podcast.coverImage,
-            audioFile:podcast.audioFile,
+            title: podcast.title,
+            description: podcast.description,
+            timestamp: podcast.timestamp,
+            hosts: podcast.hosts,
+            tags: podcast.tags,
+            status: podcast.status,
+            coverImage: podcast.coverImage,
+            audioFile: podcast.audioFile,
             "payment.paid": podcast.paid
         }).save()
 
@@ -211,7 +208,7 @@ const queries = {
     }
     ,
     findAllPodcasts: async function () {
-        return await Podcast.find({}).sort({timestamp:-1}).exec()
+        return await Podcast.find({}).sort({timestamp: -1}).exec()
     }
     ,
     findAllUsers: async function () {
@@ -227,7 +224,7 @@ const queries = {
     }
     ,
     findPodcastComments: async function (args) {
-        return await Comment.find({podcast:args}).sort({timestamp:-1}).exec()
+        return await Comment.find({podcast: args}).sort({timestamp: -1}).exec()
     }
     ,
     findComment: async function (args) {
