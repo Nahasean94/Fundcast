@@ -99,6 +99,9 @@ const PersonType = new GraphQLObjectType({
         profile_picture: {type: GraphQLString},
         date_joined: {type: GraphQLString},
         address: {type: GraphQLString},
+
+
+
     })
 })
 
@@ -159,9 +162,9 @@ const PodcastType = new GraphQLObjectType({
         listens: {type: GraphQLInt},
         hosts: {
             type: new GraphQLList(PersonType),
-            resolve(parent, args) {
-                return parent.hosts.map(host => {
-                    return queries.findUser({id: host})
+           async resolve(parent, args) {
+                return await parent.hosts.map(async host => {
+                    return  await queries.findUser({id: host})
                 })
             }
         },
@@ -323,6 +326,12 @@ const RootQuery = new GraphQLObjectType({
                 return queries.findAllUsers()
             }
         },
+        hosts: {
+            type: new GraphQLList(PersonType),
+            resolve: () => {
+                return queries.findAllHosts()
+            }
+        },
         podcast: {
             type: PodcastType,
             args: {id: {type: GraphQLID}},
@@ -332,8 +341,8 @@ const RootQuery = new GraphQLObjectType({
         },
         podcasts: {
             type: new GraphQLList(PodcastType),
-            resolve: () => {
-                return queries.findAllPodcasts()
+            async resolve ()  {
+                return await queries.findAllPodcasts()
             }
         },
         getProfileInfo: {
@@ -383,28 +392,32 @@ const RootQuery = new GraphQLObjectType({
 
             }
         },
-        fetchUserPodcasts: {
+        fetchHostPodcasts: {
             type: new GraphQLList(PodcastType),
             args: {id: {type: GraphQLID}},
             async resolve(parent, args, ctx) {
-                return await authentication.authenticate(ctx).then(async person => {
-                    let allPodcasts = []
+
+                    // let allPodcasts = []
                     return await queries.findUserPodcasts(args.id).then(async (userPodcasts) => {
-                        const podcasts = userPodcasts
+                        const {podcasts} = userPodcasts
                         if (podcasts.length < 1) {
 
                         }
                         else {
-                            for (let j = 0; j < podcasts.length; j++) {
-                                allPodcasts.push(await queries.findPodcast({id: podcasts[j]}))
-                            }
+                           return await podcasts.reverse().map(podcast=>{
+                                return queries.findPodcast({id:podcast})
+                            })
+                            // for (let j = 0; j < podcasts.length; j++) {
+                            //     allPodcasts.push(await queries.findPodcast({id: podcasts[j]}))
+                            // }
                         }
-                    }).then(() => {
-                        return allPodcasts
-                    }).catch(function (err) {
-                        console.log(err)
                     })
-                })
+                    //     .then(() => {
+                    //     // return allPodcasts
+                    // }).catch(function (err) {
+                    //     console.log(err)
+                    // })
+
 
             }
         }

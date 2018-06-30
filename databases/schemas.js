@@ -34,12 +34,16 @@ const PersonSchema = new Schema({
     },
     profile_picture: String,
     address: String,//ethereum address
-    role:{
-        type:String,
-        required:[true,"role is required"],
-        enum:["system","host","listener"]
+    role: {
+        type: String,
+        required: [true, "role is required"],
+        enum: ["system", "host", "listener"]
     },
     timestamp: Date,
+    podcasts: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Podcast'
+    }]
 
 })
 //create the Podcasts Schema (Podcasts table)
@@ -73,15 +77,15 @@ const PodcastSchema = new Schema({
         enum:
             ['original', 'edited', 'deleted']
     },
-    coverImage:{
-        type:Schema.Types.ObjectId,
-        ref:'Upload',
-        required:[true,"coverImage is a required field"]
+    coverImage: {
+        type: Schema.Types.ObjectId,
+        ref: 'Upload',
+        required: [true, "coverImage is a required field"]
     },
-    audioFile:{
-        type:Schema.Types.ObjectId,
-        ref:'Upload',
-        required:[true,"audioFile is a required field"]
+    audioFile: {
+        type: Schema.Types.ObjectId,
+        ref: 'Upload',
+        required: [true, "audioFile is a required field"]
     },
     payment: {
         paid: {
@@ -101,9 +105,9 @@ const PodcastSchema = new Schema({
 })
 //create the Uploads Schema (Uploads table)
 const UploadSchema = new Schema({
-    caption:{
-        type:String,
-        required:[true,"caption is a required field"]
+    caption: {
+        type: String,
+        required: [true, "caption is a required field"]
     },
     path: {
         type: String,
@@ -115,6 +119,22 @@ const UploadSchema = new Schema({
         ref: 'Person',
         required: [true, 'Who is the uploader?']
     },
+    timestamp: {
+        type: Date,
+    }
+})
+//create the Tags Schema (Tags table)
+const TagSchema = new Schema({
+    name: {
+        type: String,
+        required: [true, "name is a required field"]
+    },
+
+    podcasts: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Podcast',
+        required: [true, 'creating a new tag requires at least one podcast']
+    }],
     timestamp: {
         type: Date,
     }
@@ -170,8 +190,9 @@ const CommentSchema = new Schema({
 const Person = mongoose.model('Person', PersonSchema)
 const Comment = mongoose.model('Comment', CommentSchema)
 const Podcast = mongoose.model('Podcast', PodcastSchema)
+const Tag = mongoose.model('Tag', TagSchema)
 const Upload = mongoose.model('Upload', UploadSchema)
 //export the above models to used in other files
 module.exports = {
-    Person, Comment, Upload, Podcast
+    Person, Comment, Upload, Podcast, Tag
 }

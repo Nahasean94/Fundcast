@@ -3,7 +3,7 @@
  */
 
 "use strict"
-const {Person, Comment, Upload, Podcast} = require('./schemas')//import various models
+const {Person, Comment, Upload, Podcast, Tag} = require('./schemas')//import various models
 const mongoose = require('mongoose')//import mongoose library
 const bcrypt = require('bcrypt')//import bcrypt to assist hashing passwords
 //Connect to Mongodb
@@ -113,7 +113,13 @@ const queries = {
             coverImage: podcast.coverImage,
             audioFile: podcast.audioFile,
             "payment.paid": podcast.paid
-        }).save()
+        }).save().then(podcast => {
+            podcast.hosts.map(host => {
+                Person.findOneAndUpdate({
+                    _id: host
+                }, {$push: {podcasts: podcast._id}}).exec()
+            })
+        })
 
     },
     // saveUploads: async function (path, profile, uploader) {
@@ -165,14 +171,7 @@ const queries = {
     },
     findUserPodcasts: async function (args) {
         // return await Person.findById(args).select("podcasts").sort({timestamp: -1}).exec()
-        return await Podcast.find({
-            $or: [{
-                author: args,
-            },
-                {
-                    profile: args
-                },]
-        }).sort({timestamp: -1}).exec()
+        return await Person.findById(args).select("podcasts").exec()
     }
     ,
     findUserUploads: async function (args) {
@@ -211,6 +210,10 @@ const queries = {
         return await Podcast.find({}).sort({timestamp: -1}).exec()
     }
     ,
+    findAllHosts: async function () {
+        return await Person.find({role: 'host'}).exec()
+    },
+
     findAllUsers: async function () {
         return await Person.find({}).exec()
     }
@@ -252,6 +255,12 @@ const queries = {
     },
     findPodcastCoverImage: async function (args) {
         return await Podcast.findById(args._id).select('coverImage').exec()
+    },
+    findAllTags: async function () {
+        return await Tag.find({}).exec()
+    },
+    findTaggedPodcasts: async function (tag_id) {
+        return await Tag.findById(tag_id).select("podcasts").exec()
     }
 }
 module.exports = queries
