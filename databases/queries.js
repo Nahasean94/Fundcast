@@ -213,6 +213,9 @@ const queries = {
     ,
     findAllPodcasts: async function () {
         return await Podcast.find({}).sort({timestamp: -1}).exec()
+    },
+    fetchPodcastsByTags: async function (args) {
+        return await Tag.findById(args.id).select("podcasts").exec()
     }
     ,
     findAllHosts: async function () {

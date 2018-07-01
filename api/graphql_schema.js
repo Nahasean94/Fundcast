@@ -376,6 +376,19 @@ const RootQuery = new GraphQLObjectType({
                 return await queries.findAllPodcasts()
             }
         },
+        fetchPodcastsByTags: {
+            type: new GraphQLList(PodcastType),
+            args: {id: {type: GraphQLID}},
+            async resolve(parent, args) {
+                return await queries.fetchPodcastsByTags({id: args.id}).then(taggedPodcasts => {
+                    const {podcasts} = taggedPodcasts
+                    return podcasts.map(async podcast => {
+                        return await queries.findPodcast({id: podcast})
+                    })
+
+                })
+            }
+        },
         getProfileInfo: {
             type: PersonType,
             async resolve(parent, args, ctx) {
@@ -590,7 +603,7 @@ const Mutation = new GraphQLObjectType({
                 description: {type: GraphQLString},
                 hosts: {type: new GraphQLList(GraphQLString)},
                 paid: {type: GraphQLInt},
-                tags: {type:new GraphQLList(GraphQLString)},
+                tags: {type: new GraphQLList(GraphQLString)},
                 coverImage: {type: GraphQLUpload},
                 podcast: {type: GraphQLUpload},
             },
