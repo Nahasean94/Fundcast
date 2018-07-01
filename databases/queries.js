@@ -119,6 +119,11 @@ const queries = {
                     _id: host
                 }, {$push: {podcasts: podcast._id}}).exec()
             })
+            podcast.tags.map(tag=>{
+                Tag.findOneAndUpdate({
+                    name: tag
+                }, {$push: {podcasts: podcast._id}},{upsert:true}).exec()
+            })
         })
 
     },
@@ -212,6 +217,11 @@ const queries = {
     ,
     findAllHosts: async function () {
         return await Person.find({role: 'host'}).exec()
+    },
+    searchHosts: async function (username) {
+        return await Person.find(
+            {username: {"$regex": username, "$options": "i"}, role: "host"},
+        )
     },
 
     findAllUsers: async function () {

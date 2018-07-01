@@ -101,6 +101,23 @@ const PersonType = new GraphQLObjectType({
         address: {type: GraphQLString},
 
 
+    })
+})
+const TagType = new GraphQLObjectType({
+    name: 'Tag',
+    fields: () => ({
+        id: {type: GraphQLID},
+        name: {type: GraphQLString},
+        timestamp: {type: GraphQLString},
+        podcasts: {
+            type: new GraphQLList(PodcastType),
+            async resolve(parent, args) {
+                return await parent.podcasts.map(async podcast => {
+                    return await queries.findPodcast({id: podcast})
+                })
+            }
+        },
+
 
     })
 })
@@ -162,9 +179,9 @@ const PodcastType = new GraphQLObjectType({
         listens: {type: GraphQLInt},
         hosts: {
             type: new GraphQLList(PersonType),
-           async resolve(parent, args) {
+            async resolve(parent, args) {
                 return await parent.hosts.map(async host => {
-                    return  await queries.findUser({id: host})
+                    return await queries.findUser({id: host})
                 })
             }
         },
@@ -328,8 +345,22 @@ const RootQuery = new GraphQLObjectType({
         },
         hosts: {
             type: new GraphQLList(PersonType),
-            resolve: () => {
+            resolve() {
                 return queries.findAllHosts()
+            }
+        },
+        tags: {
+            type: new GraphQLList(TagType),
+            async resolve() {
+                return await queries.findAllTags()
+
+            }
+        },
+        searchHosts: {
+            type: new GraphQLList(PersonType),
+            args: {username: {type: GraphQLString}},
+            resolve(parent, args) {
+                return queries.searchHosts(args.username)
             }
         },
         podcast: {
@@ -341,7 +372,7 @@ const RootQuery = new GraphQLObjectType({
         },
         podcasts: {
             type: new GraphQLList(PodcastType),
-            async resolve ()  {
+            async resolve() {
                 return await queries.findAllPodcasts()
             }
         },
@@ -385,7 +416,7 @@ const RootQuery = new GraphQLObjectType({
             }
         },
         findPodcastComments: {
-            type:new GraphQLList(CommentType),
+            type: new GraphQLList(CommentType),
             args: {podcast_id: {type: GraphQLID}},
             async resolve(parent, args) {
                 return await queries.findPodcastComments(args.podcast_id)
@@ -397,26 +428,26 @@ const RootQuery = new GraphQLObjectType({
             args: {id: {type: GraphQLID}},
             async resolve(parent, args, ctx) {
 
-                    // let allPodcasts = []
-                    return await queries.findUserPodcasts(args.id).then(async (userPodcasts) => {
-                        const {podcasts} = userPodcasts
-                        if (podcasts.length < 1) {
+                // let allPodcasts = []
+                return await queries.findUserPodcasts(args.id).then(async (userPodcasts) => {
+                    const {podcasts} = userPodcasts
+                    if (podcasts.length < 1) {
 
-                        }
-                        else {
-                           return await podcasts.reverse().map(podcast=>{
-                                return queries.findPodcast({id:podcast})
-                            })
-                            // for (let j = 0; j < podcasts.length; j++) {
-                            //     allPodcasts.push(await queries.findPodcast({id: podcasts[j]}))
-                            // }
-                        }
-                    })
-                    //     .then(() => {
-                    //     // return allPodcasts
-                    // }).catch(function (err) {
-                    //     console.log(err)
-                    // })
+                    }
+                    else {
+                        return await podcasts.reverse().map(podcast => {
+                            return queries.findPodcast({id: podcast})
+                        })
+                        // for (let j = 0; j < podcasts.length; j++) {
+                        //     allPodcasts.push(await queries.findPodcast({id: podcasts[j]}))
+                        // }
+                    }
+                })
+                //     .then(() => {
+                //     // return allPodcasts
+                // }).catch(function (err) {
+                //     console.log(err)
+                // })
 
 
             }
@@ -559,7 +590,7 @@ const Mutation = new GraphQLObjectType({
                 description: {type: GraphQLString},
                 hosts: {type: new GraphQLList(GraphQLString)},
                 paid: {type: GraphQLInt},
-                tags: {type: GraphQLString},
+                tags: {type:new GraphQLList(GraphQLString)},
                 coverImage: {type: GraphQLUpload},
                 podcast: {type: GraphQLUpload},
             },
