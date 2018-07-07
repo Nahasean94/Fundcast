@@ -53,11 +53,13 @@ const queries = {
             _id: id
         }, {publishing: 'unpublished'}, {new: true}).exec()
     },
-    updateProfile: async function (id, profile) {
+    updateProfileBasicInfo: async function (id, profile) {
 
         return await Person.findOneAndUpdate({_id: id}, {
             username: profile.username,
             email: profile.email,
+            role: profile.role,
+            ethereum_address: profile.ethereum_address,
 
         }).exec()
     },

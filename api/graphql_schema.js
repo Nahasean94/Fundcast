@@ -106,7 +106,7 @@ const PersonType = new GraphQLObjectType({
         role: {type: GraphQLString},
         profile_picture: {type: GraphQLString},
         date_joined: {type: GraphQLString},
-        address: {type: GraphQLString},
+        ethereum_address: {type: GraphQLString},
 
 
     })
@@ -520,18 +520,18 @@ const Mutation = new GraphQLObjectType({
                 })
             }
         },
-        updateProfile: {
+        updateProfileBasicInfo: {
             type: PersonType,
             args: {
                 id: {type: GraphQLID},
                 username: {type: GraphQLString},
                 email: {type: GraphQLString},
-                password: {type: GraphQLString},
                 role: {type: GraphQLString},
+                ethereum_address: {type: GraphQLString},
             },
             async resolve(parent, args, ctx) {
                 return await authentication.authenticate(ctx).then(async ({id}) => {
-                    return await queries.updateProfile(id, args).then(person => {
+                    return await queries.updateProfileBasicInfo(id, args).then(person => {
                         return person
                     })
                 })

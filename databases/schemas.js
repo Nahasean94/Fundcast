@@ -33,13 +33,13 @@ const PersonSchema = new Schema({
         required: [true, 'Password is a required field']
     },
     profile_picture: String,
-    address: String,//ethereum address
+    ethereum_address: String,//ethereum address
     role: {
         type: String,
         required: [true, "role is required"],
         enum: ["system", "host", "listener"]
     },
-    timestamp: Date,
+    date_joined: Date,
     podcasts: [{
         type: Schema.Types.ObjectId,
         ref: 'Podcast'
