@@ -10,6 +10,7 @@ const authentication = require('./middleware/authenticate')//this module helps u
 const fs = require('fs')//this will help us create and manipulate the file system
 const mkdirp = require('mkdirp')//will help use create new folders
 const shortid = require('shortid')//will help us name each upload uniquely
+const promisesAll=require('promise-all')
 
 //Store the upload
 const storeFS = ({stream}, {filename}, id, uploader) => {
@@ -33,13 +34,20 @@ const storeFS = ({stream}, {filename}, id, uploader) => {
     )
 }
 //process the upload and also store the path in the database
-const processUpload = async (upload, profile, uploader) => {
+const processUpload = async (upload, uploader) => {
     const id = shortid.generate()
-    const {stream, filename,} = await upload.file
+    const {stream, filename,} = await upload
     const path = `${uploader}/${id}-${filename}`
     return await storeFS({stream, filename}, id, uploader).then(() =>
-        queries.storeUpload(path, upload.caption, uploader))
+        queries.storeUpload(path, 'testing', uploader))
 }
+// const processUpload = async (upload, profile, uploader) => {
+//     const id = shortid.generate()
+//     const {stream, filename,} = await upload.file
+//     const path = `${uploader}/${id}-${filename}`
+//     return await storeFS({stream, filename}, id, uploader).then(() =>
+//         queries.storeUpload(path, upload.caption, uploader))
+// }
 const getMeta = async (file) => {
     const {stream, filename} = await file
     return {stream, filename}
@@ -572,12 +580,11 @@ const Mutation = new GraphQLObjectType({
             type: PodcastType,
             args: {
                 id: {type: GraphQLID},
-                body: {type: GraphQLString},
             },
             async resolve(parent, args, ctx) {
                 return await authentication.authenticate(ctx).then(async ({id}) => {
                     return await queries.deletePodcast(id, args.id).then(podcast => {
-                        return podcastlik
+                        return podcast
                     })
                 })
             }
@@ -610,8 +617,21 @@ const Mutation = new GraphQLObjectType({
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
                 if (id) {
+//                     const files=[args.coverImage,args.podcast]
+//                     console.log(files)
+//                     const { resolve, reject } = await promisesAll(
+//                         files.map(file=>processUpload(file,id))
+//                     )
+//
+//                     if (reject)
+//                         reject.forEach(({ name, message }) =>
+//                             console.error(`${name}: ${message}`)
+//                         )
+// console.log(resolve)
+                    // return resolve
                     return await createNewPodcast(args, id)
                 }
+
 
             }
         },
@@ -624,6 +644,26 @@ const Mutation = new GraphQLObjectType({
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
                 return await processUpload(args, id)
+            }
+        },
+        publishPodcast: {
+            type: PodcastType,
+            args: {
+                id: {type: GraphQLString},
+            },
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return await queries.publishPodcast(args.id)
+            }
+        },
+        unPublishPodcast: {
+            type: PodcastType,
+            args: {
+                id: {type: GraphQLString},
+            },
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return await queries.unPublishPodcast(args.id)
             }
         },
         uploadProfilePicture: {

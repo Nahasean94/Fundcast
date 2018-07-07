@@ -75,7 +75,14 @@ const PodcastSchema = new Schema({
     status: {
         type: String,
         enum:
-            ['original', 'edited', 'deleted']
+            ['original', 'edited'],
+        default:'original'
+    },
+    publishing: {
+        type: String,
+        enum:
+            ['published', 'unpublished'],
+        default:'published'
     },
     coverImage: {
         type: Schema.Types.ObjectId,

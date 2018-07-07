@@ -25,8 +25,13 @@ const queries = {
     //     })
     // },
     deletePodcast: async function (author, podcast_id) {
+        Podcast.findById(podcast_id).then(podcast => {
+            podcast.hosts.map(host => {
+                Person.findOneAndUpdate({_id: host}, {$pull: {podcasts: podcast_id}}).exec()
+
+            })
+        })
         Comment.remove({podcast: podcast_id}).exec()
-        Person.findOneAndUpdate({_id: author}, {$pull: {podcasts: podcast_id}}).exec()
         return await Podcast.findByIdAndRemove({_id: podcast_id}).exec()
 
     },
@@ -37,6 +42,16 @@ const queries = {
             timestamp: new Date(),
             caption: caption,
         }).save()
+    },
+    publishPodcast: async function (id) {
+        return await Podcast.findOneAndUpdate({
+            _id: id
+        }, {publishing: 'published'}, {new: true}).exec()
+    },
+    unPublishPodcast: async function (id) {
+        return await Podcast.findOneAndUpdate({
+            _id: id
+        }, {publishing: 'unpublished'}, {new: true}).exec()
     },
     updateProfile: async function (id, profile) {
 
@@ -119,10 +134,10 @@ const queries = {
                     _id: host
                 }, {$push: {podcasts: podcast._id}}).exec()
             })
-            podcast.tags.map(tag=>{
+            podcast.tags.map(tag => {
                 Tag.findOneAndUpdate({
                     name: tag
-                }, {$push: {podcasts: podcast._id}},{upsert:true}).exec()
+                }, {$push: {podcasts: podcast._id}}, {upsert: true}).exec()
             })
         })
 
