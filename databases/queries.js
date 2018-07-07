@@ -81,6 +81,20 @@ const queries = {
             tags: podcast.tags
         }, {new: true}).exec()
     },
+    updateCoverImageFile: async function (podcast, coverImage) {
+        return await Podcast.findOneAndUpdate({
+            _id: podcast.id
+        }, {
+            coverImage: coverImage
+        }, {new: true}).exec()
+    },
+    updateAudioFile: async function (podcast, audioFile) {
+        return await Podcast.findOneAndUpdate({
+            _id: podcast.id
+        }, {
+            audioFile: audioFile
+        }, {new: true}).exec()
+    },
     likeComment: async function (ctx, id) {
         return await Comment.findOneAndUpdate({
             _id: id,

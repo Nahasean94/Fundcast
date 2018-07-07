@@ -38,7 +38,7 @@ const processUpload = async (upload, uploader) => {
     const id = shortid.generate()
     const {stream, filename,} = await upload
     const path = `${uploader}/${id}-${filename}`
-    return await storeFS({stream, filename}, id, uploader).then(() =>
+    return await storeFS({stream}, {filename}, id, uploader).then(() =>
         queries.storeUpload(path, 'testing', uploader))
 }
 // const processUpload = async (upload, profile, uploader) => {
@@ -641,6 +641,34 @@ const Mutation = new GraphQLObjectType({
                 }
 
 
+            }
+        },
+        updateCoverImageFile: {
+            type: PodcastType,
+            args: {
+                id: {type: GraphQLID},
+                coverImage: {type: GraphQLUpload},
+            },
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return await processUpload(args.coverImage, id).then(async upload=>{
+                    const {id}=upload
+                    return await queries.updateCoverImageFile(args,id)
+                })
+            }
+        },
+        updateAudioFile: {
+            type: PodcastType,
+            args: {
+                id: {type: GraphQLID},
+                podcast: {type: GraphQLUpload},
+            },
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return await processUpload(args.podcast, id).then(async upload=>{
+                    const {id}=upload
+                    return await queries.updateAudioFile(args,id)
+                })
             }
         },
         uploadFile: {
