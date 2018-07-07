@@ -69,13 +69,16 @@ const queries = {
             timestamp: new Date()
         }).save()
     },
-    updatePodcast: async function (podcast) {
+    updateBasicInfo: async function (podcast) {
         return await Podcast.findOneAndUpdate({
             _id: podcast.id
         }, {
-            body: podcast.body,
-            status: 'edited',
-            timestamp: new Date()
+            title: podcast.title,
+            description: podcast.description,
+            timestamp: new Date(),
+            hosts: podcast.hosts,
+            'payment.paid': podcast.paid,
+            tags: podcast.tags
         }, {new: true}).exec()
     },
     likeComment: async function (ctx, id) {
@@ -228,6 +231,9 @@ const queries = {
     ,
     findAllPodcasts: async function () {
         return await Podcast.find({}).sort({timestamp: -1}).exec()
+    },
+    findPublishedPodcasts: async function () {
+        return await Podcast.find({publishing: 'published'}).sort({timestamp: -1}).exec()
     },
     fetchPodcastsByTags: async function (args) {
         return await Tag.findById(args.id).select("podcasts").exec()
