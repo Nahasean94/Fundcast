@@ -232,7 +232,7 @@ const queries = {
     storeProfilePicture: async function (path, uploader) {
         return await Person.findOneAndUpdate({
             _id: uploader,
-        }, {profile_picture: path}).exec()
+        }, {profile_picture: path},{new:true}).exec()
     }
     ,
     findTwinpals: async function (args) {

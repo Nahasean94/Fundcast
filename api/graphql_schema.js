@@ -92,7 +92,7 @@ const processProfilePicture = async (upload, uploader) => {
     const id = shortid.generate()
     const {stream, filename,} = await upload
     const path = `${uploader}/${id}-${filename}`
-    return await storeFS({stream, filename}, id, uploader).then(() =>
+    return await storeFS({stream}, {filename}, id, uploader).then(() =>
         queries.storeProfilePicture(path, uploader))
 }
 
@@ -703,13 +703,13 @@ const Mutation = new GraphQLObjectType({
             }
         },
         uploadProfilePicture: {
-            type: UpdloadProfilePictureType,
+            type: PersonType,
             args: {
                 file: {type: GraphQLUpload},
             },
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
-                return !!(await processProfilePicture(args.file, id))
+                return await processProfilePicture(args.file, id)
             }
 
         }
