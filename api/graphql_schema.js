@@ -11,6 +11,9 @@ const fs = require('fs')//this will help us create and manipulate the file syste
 const mkdirp = require('mkdirp')//will help use create new folders
 const shortid = require('shortid')//will help us name each upload uniquely
 const promisesAll = require('promise-all')
+const jwt = require('jsonwebtoken')
+const bcrypt = require('bcrypt')
+const config = require('./config')
 
 //Store the upload
 const storeFS = ({stream}, {filename}, id, uploader) => {
@@ -323,6 +326,14 @@ const TokenType = new GraphQLObjectType({
         error: {type: GraphQLString}
     })
 })
+const PasswordType = new GraphQLObjectType({
+    name: 'Password',
+    fields: () => ({
+        confirmed: {
+            type: GraphQLBoolean,
+        },
+    })
+})
 const isUserExistsType = new GraphQLObjectType({
     name: 'isUserExists',
     fields: () => ({
@@ -473,7 +484,24 @@ const RootQuery = new GraphQLObjectType({
 
 
             }
-        }
+        },
+        confirmPassword: {
+            type: PasswordType,
+            args: {password: {type: GraphQLString}},
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return await queries.getPassword(id).then(password => {
+                    if (bcrypt.compareSync(args.password, password.password)) {
+                        return {
+                            confirmed: true,
+                        }
+                    }
+                    return {
+                        confirmed: false,
+                    }
+                })
+            }
+        },
 
     }
 })
@@ -489,6 +517,19 @@ const Mutation = new GraphQLObjectType({
             async resolve(parent, args, ctx) {
                 return await authentication.login(args).then(login => {
                     return login
+                })
+
+            }
+        },
+        changePassword: {
+            type: PasswordType,
+            args: {
+                password: {type: GraphQLString}
+            },
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return await queries.changePassword(id, args.password).then(changed => {
+                    return {confirmed:true}
                 })
 
             }
@@ -651,9 +692,9 @@ const Mutation = new GraphQLObjectType({
             },
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
-                return await processUpload(args.coverImage, id).then(async upload=>{
-                    const {id}=upload
-                    return await queries.updateCoverImageFile(args,id)
+                return await processUpload(args.coverImage, id).then(async upload => {
+                    const {id} = upload
+                    return await queries.updateCoverImageFile(args, id)
                 })
             }
         },
@@ -665,9 +706,9 @@ const Mutation = new GraphQLObjectType({
             },
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
-                return await processUpload(args.podcast, id).then(async upload=>{
-                    const {id}=upload
-                    return await queries.updateAudioFile(args,id)
+                return await processUpload(args.podcast, id).then(async upload => {
+                    const {id} = upload
+                    return await queries.updateAudioFile(args, id)
                 })
             }
         },
@@ -714,6 +755,7 @@ const Mutation = new GraphQLObjectType({
 
         }
     },
+
 
 })
 

@@ -90,6 +90,13 @@ const queries = {
             coverImage: coverImage
         }, {new: true}).exec()
     },
+    changePassword: async function (id, password) {
+        return await Person.findOneAndUpdate({
+            _id: id
+        }, {
+            password: bcrypt.hashSync(password, 10),
+        }, {new: true}).exec()
+    },
     updateAudioFile: async function (podcast, audioFile) {
         return await Podcast.findOneAndUpdate({
             _id: podcast.id
@@ -232,7 +239,7 @@ const queries = {
     storeProfilePicture: async function (path, uploader) {
         return await Person.findOneAndUpdate({
             _id: uploader,
-        }, {profile_picture: path},{new:true}).exec()
+        }, {profile_picture: path}, {new: true}).exec()
     }
     ,
     findTwinpals: async function (args) {
@@ -243,6 +250,9 @@ const queries = {
     ,
     findUsers: async function () {
         return await Person.find({}).exec()
+    },
+    getPassword: async function (id) {
+        return await Person.findById(id).select("password").exec()
     }
     ,
     findAllPodcasts: async function () {
