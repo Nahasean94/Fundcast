@@ -695,10 +695,8 @@ const Mutation = new GraphQLObjectType({
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
                 if (id) {
-                    return await createNewPodcast(args, id)
+                    return await promisesAll(createNewPodcast(args, id))
                 }
-
-
             }
         },
         updateBasicInfo: {
