@@ -152,6 +152,25 @@ const queries = {
             }
         }, {new: true}).exec()
     },
+    addHistory: async function (podcast_id, user) {
+        return await  Person.findOneAndUpdate({_id: user}, {
+            $push: {
+                history: podcast_id
+            }
+        }, {new: true}).exec()
+    },
+    getHistory: async function (user) {
+
+        return await  Person.findById(user).select('history').exec()
+    },
+
+    addListens: async function (podcast_id) {
+        return await  Podcast.findOneAndUpdate({_id: podcast_id}, {
+            $inc: {
+                listens: 1
+            }
+        }, {new: true}).exec()
+    },
 
     createNewPodcast: async function (author, podcast) {
         return await new Podcast({

@@ -50,7 +50,7 @@ const PersonSchema = new Schema({
     }],
     history: [{
         type: Schema.Types.ObjectId,
-        ref: 'Podcast'
+        ref: 'Podcast',
     }],
     subscriptions: {
         authors: [{

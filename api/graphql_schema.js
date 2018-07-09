@@ -202,7 +202,9 @@ const PodcastType = new GraphQLObjectType({
         title: {type: GraphQLString},
         description: {type: GraphQLString},
         tags: {type: new GraphQLList(GraphQLString)},
-        listens: {type: GraphQLInt},
+        listens: {
+            type: GraphQLInt
+        },
         publishing: {type: GraphQLString},
         hosts: {
             type: new GraphQLList(PersonType),
@@ -524,6 +526,18 @@ const RootQuery = new GraphQLObjectType({
                 })
             }
         },
+        getHistory: {
+            type: new GraphQLList(PodcastType),
+            // args:{podcast_id:GraphQLInt},
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return await queries.getHistory(id).then(async podcasts => {
+                    return await podcasts.history.map(async podcast => {
+                        return await queries.findPodcast({id: podcast})
+                    })
+                })
+            }
+        }
 
     }
 })
@@ -775,7 +789,24 @@ const Mutation = new GraphQLObjectType({
                 return await processProfilePicture(args.file, id)
             }
 
-        }
+        },
+        addHistory: {
+            type: PodcastType,
+            args: {podcast_id: {type:GraphQLID}},
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return queries.addHistory(args.podcast_id,id).then(async user => {
+                    return await queries.addListens(args.podcast_id)
+                })
+            }
+        },
+        addListens: {
+            type: PodcastType,
+            args: {podcast_id: {type:GraphQLID}},
+            async resolve(parent, args, ctx) {
+                return await queries.addListens(args.podcast_id)
+            }
+        },
     },
 
 
