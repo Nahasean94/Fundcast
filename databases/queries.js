@@ -154,7 +154,7 @@ const queries = {
     },
     addHistory: async function (podcast_id, user) {
         return await  Person.findOneAndUpdate({_id: user}, {
-            $push: {
+            $addToSet: {
                 history: podcast_id
             }
         }, {new: true}).exec()
