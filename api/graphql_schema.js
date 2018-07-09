@@ -110,6 +110,21 @@ const PersonType = new GraphQLObjectType({
         profile_picture: {type: GraphQLString},
         date_joined: {type: GraphQLString},
         ethereum_address: {type: GraphQLString},
+        liked_podcasts: {
+            type: new GraphQLList(PodcastType),
+            async resolve(parent, args) {
+                return await queries.findLikedPodcasts({id: parent.id}).then(async podcasts => {
+                    if (podcasts.liked_podcasts.length > 0) {
+                        return await podcasts.liked_podcasts.map(async podcast => {
+
+                            return queries.findPodcast({id: podcast})
+                        })
+                    }
+                }).catch(err => {
+                    console.log(err)
+                })
+            }
+        }
 
 
     })
@@ -396,6 +411,24 @@ const RootQuery = new GraphQLObjectType({
                 return await queries.findPublishedPodcasts()
             }
         },
+        fetchLikedPodcasts: {
+            type: new GraphQLList(PodcastType),
+            args: {
+                id: {type: GraphQLID},
+            },
+            async resolve(parent, args) {
+                return await queries.findLikedPodcasts({id: args.id}).then(async podcasts => {
+                    if (podcasts.liked_podcasts.length > 0) {
+                        return await podcasts.liked_podcasts.map(async podcast => {
+                            return queries.findPodcast({id: podcast})
+                        })
+                    }
+                }).catch(err => {
+                    console.log(err)
+                })
+            }
+
+        },
         fetchPodcastsByTags: {
             type: new GraphQLList(PodcastType),
             args: {id: {type: GraphQLID}},
@@ -461,7 +494,6 @@ const RootQuery = new GraphQLObjectType({
             args: {id: {type: GraphQLID}},
             async resolve(parent, args, ctx) {
 
-                // let allPodcasts = []
                 return await queries.findUserPodcasts(args.id).then(async (userPodcasts) => {
                     const {podcasts} = userPodcasts
                     if (podcasts.length < 1) {
@@ -471,18 +503,8 @@ const RootQuery = new GraphQLObjectType({
                         return await podcasts.reverse().map(podcast => {
                             return queries.findPodcast({id: podcast})
                         })
-                        // for (let j = 0; j < podcasts.length; j++) {
-                        //     allPodcasts.push(await queries.findPodcast({id: podcasts[j]}))
-                        // }
                     }
                 })
-                //     .then(() => {
-                //     // return allPodcasts
-                // }).catch(function (err) {
-                //     console.log(err)
-                // })
-
-
             }
         },
         confirmPassword: {
@@ -529,7 +551,7 @@ const Mutation = new GraphQLObjectType({
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
                 return await queries.changePassword(id, args.password).then(changed => {
-                    return {confirmed:true}
+                    return {confirmed: true}
                 })
 
             }

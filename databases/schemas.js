@@ -43,8 +43,43 @@ const PersonSchema = new Schema({
     podcasts: [{
         type: Schema.Types.ObjectId,
         ref: 'Podcast'
+    }],
+    liked_podcasts: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Podcast'
+    }],
+    history: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Podcast'
+    }],
+    subscriptions: {
+        authors: [{
+            type: Schema.Types.ObjectId,
+            ref: 'Podcast'
+        }],
+        tags: [{
+            type: Schema.Types.ObjectId,
+            ref: 'Podcast'
+        }],
+    },
+    notifications: [{
+        podcast: {
+            type: Schema.Types.ObjectId,
+            ref: 'Podcast',
+            // unique:[true,'podcast already exists'],
+             required: [true, 'podcast is a required field']
+        },
+        category: {
+            type: String,
+            enum: ['tags', 'host'],
+           required: [true, 'category is a required field']
+        },
+        read: {
+            type: Boolean,
+           default:false,
+        },
+        timestamp:Date
     }]
-
 })
 //create the Podcasts Schema (Podcasts table)
 const PodcastSchema = new Schema({
@@ -76,13 +111,13 @@ const PodcastSchema = new Schema({
         type: String,
         enum:
             ['original', 'edited'],
-        default:'original'
+        default: 'original'
     },
     publishing: {
         type: String,
         enum:
             ['published', 'unpublished'],
-        default:'published'
+        default: 'published'
     },
     coverImage: {
         type: Schema.Types.ObjectId,

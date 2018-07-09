@@ -119,6 +119,11 @@ const queries = {
         }, {new: true}).exec()
     },
     unlikePodcast: async function (unliker, id) {
+        Person.findOneAndUpdate({_id: liker}, {
+            $pull: {
+                liked_podcasts: id
+            }
+        }, {new: true}).exec()
         return await Podcast.findOneAndUpdate({
             _id: id
         }, {
@@ -130,6 +135,11 @@ const queries = {
         }, {new: true}).exec()
     },
     likePodcast: async function (liker, id) {
+        Person.findOneAndUpdate({_id: liker}, {
+            $push: {
+                liked_podcasts: id
+            }
+        }, {new: true}).exec()
         return await Podcast.findOneAndUpdate({
             _id: id,
             author: {$ne: liker}
@@ -223,6 +233,7 @@ const queries = {
     findUserUploads: async function (args) {
         return await Person.findById(args._id).select("uploads").sort({timestamp: -1}).exec()
     }
+
     ,
     fetchNewsFeed: async function (ctx) {
         return await Podcast.find({
