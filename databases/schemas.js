@@ -122,12 +122,12 @@ const PodcastSchema = new Schema({
     coverImage: {
         type: Schema.Types.ObjectId,
         ref: 'Upload',
-        required: [true, "coverImage is a required field"]
+
     },
     audioFile: {
         type: Schema.Types.ObjectId,
         ref: 'Upload',
-        required: [true, "audioFile is a required field"]
+
     },
     payment: {
         paid: {

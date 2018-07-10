@@ -227,9 +227,10 @@ const PodcastType = new GraphQLObjectType({
             type: UploadType,
             async resolve(parent, args) {
                 return await queries.findPodcastFile(parent).then(async podcastFile => {
+                    if(podcastFile){
                     const {audioFile} = podcastFile
                     return await queries.findUpload({id: audioFile})
-
+                    }
                 })
 
             }
@@ -238,9 +239,11 @@ const PodcastType = new GraphQLObjectType({
             type: UploadType,
             async resolve(parent, args) {
                 return await queries.findPodcastCoverImage(parent).then(async podcastCoverImage => {
+                    if(podcastCoverImage){
+
                     const {coverImage} = podcastCoverImage
                     return await queries.findUpload({id: coverImage})
-
+                    }
                 })
 
             }
@@ -718,6 +721,38 @@ const Mutation = new GraphQLObjectType({
 
             }
         },
+        addBasicInfo: {
+            type: PodcastType,
+            args: {
+                title: {type: GraphQLString},
+                description: {type: GraphQLString},
+                hosts: {type: new GraphQLList(GraphQLString)},
+                paid: {type: GraphQLInt},
+                tags: {type: new GraphQLList(GraphQLString)},
+            },
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                if (id) {
+                    return await queries.addBasicInfo(args)
+                }
+
+
+            }
+        },
+        addCoverImageFile: {
+            type: PodcastType,
+            args: {
+                id: {type: GraphQLID},
+                coverImage: {type: GraphQLUpload},
+            },
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return await processUpload(args.coverImage, id).then(async upload => {
+                    const {id} = upload
+                    return await queries.addCoverImageFile(args, id)
+                })
+            }
+        },
         updateCoverImageFile: {
             type: PodcastType,
             args: {
@@ -743,6 +778,20 @@ const Mutation = new GraphQLObjectType({
                 return await processUpload(args.podcast, id).then(async upload => {
                     const {id} = upload
                     return await queries.updateAudioFile(args, id)
+                })
+            }
+        },
+        addAudioFile: {
+            type: PodcastType,
+            args: {
+                id: {type: GraphQLID},
+                podcast: {type: GraphQLUpload},
+            },
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return await processUpload(args.podcast, id).then(async upload => {
+                    const {id} = upload
+                    return await queries.addAudioFile(args, id)
                 })
             }
         },

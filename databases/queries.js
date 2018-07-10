@@ -90,6 +90,13 @@ const queries = {
             coverImage: coverImage
         }, {new: true}).exec()
     },
+    addCoverImageFile: async function (podcast, coverImage) {
+        return await Podcast.findOneAndUpdate({
+            _id: podcast.id
+        }, {
+            coverImage: coverImage
+        }, {new: true}).exec()
+    },
     changePassword: async function (id, password) {
         return await Person.findOneAndUpdate({
             _id: id
@@ -98,6 +105,13 @@ const queries = {
         }, {new: true}).exec()
     },
     updateAudioFile: async function (podcast, audioFile) {
+        return await Podcast.findOneAndUpdate({
+            _id: podcast.id
+        }, {
+            audioFile: audioFile
+        }, {new: true}).exec()
+    },
+    addAudioFile: async function (podcast, audioFile) {
         return await Podcast.findOneAndUpdate({
             _id: podcast.id
         }, {
@@ -172,28 +186,26 @@ const queries = {
         }, {new: true}).exec()
     },
 
-    createNewPodcast: async function (author, podcast) {
+    addBasicInfo: async function ( podcast) {
         return await new Podcast({
             title: podcast.title,
             description: podcast.description,
-            timestamp: podcast.timestamp,
+            timestamp: new Date(),
             hosts: podcast.hosts,
             tags: podcast.tags,
-            status: podcast.status,
-            coverImage: podcast.coverImage,
-            audioFile: podcast.audioFile,
             "payment.paid": podcast.paid
-        }).save().then(podcast => {
-            podcast.hosts.map(host => {
+        }).save().then(  podcast => {
+             podcast.hosts.map(host => {
                 Person.findOneAndUpdate({
                     _id: host
                 }, {$push: {podcasts: podcast._id}}).exec()
             })
-            podcast.tags.map(tag => {
+             podcast.tags.map(tag => {
                 Tag.findOneAndUpdate({
                     name: tag
                 }, {$push: {podcasts: podcast._id}}, {upsert: true}).exec()
             })
+        return podcast
         })
 
     },
