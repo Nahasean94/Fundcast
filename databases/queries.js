@@ -186,7 +186,7 @@ const queries = {
         }, {new: true}).exec()
     },
 
-    addBasicInfo: async function ( podcast) {
+    addBasicInfo: async function (podcast) {
         return await new Podcast({
             title: podcast.title,
             description: podcast.description,
@@ -194,18 +194,18 @@ const queries = {
             hosts: podcast.hosts,
             tags: podcast.tags,
             "payment.paid": podcast.paid
-        }).save().then(  podcast => {
-             podcast.hosts.map(host => {
+        }).save().then(podcast => {
+            podcast.hosts.map(host => {
                 Person.findOneAndUpdate({
                     _id: host
                 }, {$push: {podcasts: podcast._id}}).exec()
             })
-             podcast.tags.map(tag => {
+            podcast.tags.map(tag => {
                 Tag.findOneAndUpdate({
                     name: tag
                 }, {$push: {podcasts: podcast._id}}, {upsert: true}).exec()
             })
-        return podcast
+            return podcast
         })
 
     },
@@ -310,10 +310,38 @@ const queries = {
     findAllHosts: async function () {
         return await Person.find({role: 'host'}).exec()
     },
-    searchHosts: async function (username) {
+    searchHosts: async function (search) {
         return await Person.find(
-            {username: {"$regex": username, "$options": "i"}, role: "host"},
-        )
+            {username: {"$regex": search, "$options": "i"}, role: "host"},
+        ).exec()
+    },
+    searchUsers: async function (search) {
+        return await Person.find(
+            {username: {"$regex": search, "$options": "i"}, role: "listener"},
+        ).exec()
+    },
+    searchPodcasts: async function (search) {
+        return await Podcast.find(
+            {
+                $or: [
+                    {
+                        title: {"$regex": search, "$options": "i"}
+                    },
+                    {
+                        description: {"$regex": search, "$options": "i"}
+                    }],
+
+                publishing: 'published'
+
+            }
+        ).exec()
+    },
+    searchTags: async function (search) {
+        return await Tag.find(
+            {
+                name: {"$regex": search, "$options": "i"}
+            },
+        ).exec()
     },
 
     findAllUsers: async function () {

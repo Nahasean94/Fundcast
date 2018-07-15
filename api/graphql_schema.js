@@ -360,7 +360,7 @@ const isUserExistsType = new GraphQLObjectType({
         exists: {type: GraphQLBoolean},
     })
 })
-const UpdloadProfilePictureType = new GraphQLObjectType({
+const UploadProfilePictureType = new GraphQLObjectType({
     name: 'UpdloadProfilePicture',
     fields: () => ({
         uploaded: {type: GraphQLBoolean},
@@ -394,13 +394,6 @@ const RootQuery = new GraphQLObjectType({
             async resolve() {
                 return await queries.findAllTags()
 
-            }
-        },
-        searchHosts: {
-            type: new GraphQLList(PersonType),
-            args: {username: {type: GraphQLString}},
-            resolve(parent, args) {
-                return queries.searchHosts(args.username)
             }
         },
         podcast: {
@@ -539,6 +532,34 @@ const RootQuery = new GraphQLObjectType({
                         return await queries.findPodcast({id: podcast})
                     })
                 })
+            }
+        },
+        searchPodcasts: {
+            type: new GraphQLList(PodcastType),
+            args:{search:{type:GraphQLString}},
+            async resolve(parent, args, ctx) {
+                return await queries.searchPodcasts(args.search)
+            }
+        },
+        searchHosts: {
+            type: new GraphQLList(PersonType),
+            args:{search:{type:GraphQLString}},
+            async resolve(parent, args, ctx) {
+                return await queries.searchHosts(args.search)
+            }
+        },
+        searchTags: {
+            type: new GraphQLList(TagType),
+            args:{search:{type:GraphQLString}},
+            async resolve(parent, args, ctx) {
+                return await queries.searchTags(args.search)
+            }
+        },
+        searchUsers: {
+            type: new GraphQLList(PersonType),
+            args:{search:{type:GraphQLString}},
+            async resolve(parent, args, ctx) {
+                return await queries.searchUsers(args.search)
             }
         }
 
