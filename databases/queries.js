@@ -11,19 +11,6 @@ const bcrypt = require('bcrypt')//import bcrypt to assist hashing passwords
 mongoose.connect('mongodb://localhost/fundcast', {promiseLibrary: global.Promise})
 
 const queries = {
-    // deleteAccount: async function (ctx) {
-    //     //TODO make all the content uploaded by these people to be anonymous
-    //     return await Person.findByIdAndRemove({_id: ctx.session.user_id}).exec()
-    // },
-    // deleteUpload: async function (ctx, upload_id) {
-    //     return await Person.findOneAndUpdate({_id: ctx.session.user_id}, {$pull: {uploads: upload_id}}).exec().then(async function (pulled) {
-    //         await Upload.findByIdAndRemove({_id: upload_id}).exec().then(async function (removed) {
-    //             fs.unlink(`./public/uploads/${removed.path}`, () => {
-    //                 //TODO notify the user that its deleted
-    //             })
-    //         })
-    //     })
-    // },
     deletePodcast: async function (author, podcast_id) {
         Podcast.findById(podcast_id).then(podcast => {
             podcast.hosts.map(host => {
@@ -195,42 +182,59 @@ const queries = {
             tags: podcast.tags,
             "payment.paid": podcast.paid
         }).save().then(podcast => {
-            podcast.hosts.map(host => {
-                Person.findOneAndUpdate({
-                    _id: host
-                }, {$push: {podcasts: podcast._id}}).exec()
+            podcast.hosts.map( host => {
+                this.addPodcastToHost(podcast, host)
             })
-            podcast.tags.map(tag => {
-                Tag.findOneAndUpdate({
-                    name: tag
-                }, {$push: {podcasts: podcast._id}}, {upsert: true}).exec()
+            podcast.tags.map( tag => {
+                this.addPodcastToTag(podcast, tag)
             })
             return podcast
         })
-
     },
-    // saveUploads: async function (path, profile, uploader) {
-    //     return await this.storeUpload(path, uploader).then(async upload => {
-    //         //create a new podcast of the uploaded file
-    //       return await new Podcast({
-    //             body: '',
-    //             author: uploader,
-    //             status: 'original',
-    //             timestamp: new Date(),
-    //             profile: profile,
-    //             uploads: upload._id
-    //
-    //         }).save()
-    //
-    //         return podcast
-    //     })
-    // },
-    viewTwinpal: async function (id) {
-        return Person.findOne({
-            '_id': id
-        }).select('first_name last_name profile_picture podcasts').exec()
-    }
-    ,
+    addPodcastToTag: async function (podcast, tag) {
+        const updatedTag = await Tag.findOneAndUpdate({
+            name: tag
+        }, {$push: {podcasts: podcast._id}}, {upsert: true}).exec()
+        updatedTag.subscribers.map(subscriber => {
+            this.addTagNotification(podcast, subscriber)
+        })
+    },
+    addTagNotification: async function (podcast, subscriber) {
+        Person.findOneAndUpdate({
+            _id: subscriber
+        }, {
+            $addToSet: {
+                notifications: {
+                    podcast: podcast._id,
+                    category: 'tags',
+                    read: false,
+                    timestamp: new Date()
+                }
+            }
+        }).exec()
+    },
+    addPodcastToHost: async function (podcast, host) {
+        const updatedHost = await Person.findOneAndUpdate({
+            _id: host
+        }, {$push: {podcasts: podcast._id}}, {new: true}).exec()
+        updatedHost.subscribers.map(subscriber => {
+            this.addHostNotification(podcast, subscriber)
+        })
+    },
+    addHostNotification: async function (podcast, subscriber) {
+        Person.findOneAndUpdate({
+            _id: subscriber
+        }, {
+            $addToSet: {
+                notifications: {
+                    podcast: podcast._id,
+                    category: 'host',
+                    read: false,
+                    timestamp: new Date()
+                }
+            }
+        }).exec()
+    },
     signup: async function (userInfo) {
         return await new Person({
             password: bcrypt.hashSync(userInfo.password, 10),
@@ -260,35 +264,7 @@ const queries = {
         // return await Person.findById(args).select("podcasts").sort({timestamp: -1}).exec()
         return await Person.findById(args).select("podcasts").exec()
     }
-    ,
-    findUserUploads: async function (args) {
-        return await Person.findById(args._id).select("uploads").sort({timestamp: -1}).exec()
-    }
 
-    ,
-    fetchNewsFeed: async function (ctx) {
-        return await Podcast.find({
-            $or: [{
-                author: id,
-            },
-                {
-                    profile: id
-                },]
-        }).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').limit(2).exec()
-    }
-    ,
-
-    storeProfilePicture: async function (path, uploader) {
-        return await Person.findOneAndUpdate({
-            _id: uploader,
-        }, {profile_picture: path}, {new: true}).exec()
-    }
-    ,
-    findTwinpals: async function (args) {
-        return await Person.find({
-            'birthday': args.birthday
-        }).where('_id').ne(args.id).exec()
-    }
     ,
     findUsers: async function () {
         return await Person.find({}).exec()
@@ -394,24 +370,24 @@ const queries = {
     findTaggedPodcasts: async function (tag_id) {
         return await Tag.findById(tag_id).select("podcasts").exec()
     },
-    subscribeToHost: async function (host,subscriber) {
-        const subscribed= await Person.findByIdAndUpdate(host, { $addToSet: {subscribers: subscriber}},{new:true}).exec()
-        Person.findByIdAndUpdate(subscriber, { $addToSet: {"subscriptions.hosts": host}},{new:true}).exec()
+    subscribeToHost: async function (host, subscriber) {
+        const subscribed = await Person.findByIdAndUpdate(host, {$addToSet: {subscribers: subscriber}}, {new: true}).exec()
+        Person.findByIdAndUpdate(subscriber, {$addToSet: {"subscriptions.hosts": host}}, {new: true}).exec()
         return subscribed
     },
     unSubscribeFromHost: async function (host, subscriber) {
-        const subscribed = await Person.findByIdAndUpdate(host, { $pull: {subscribers: subscriber}},{new:true}).exec()
-        Person.findByIdAndUpdate(subscriber, { $pull: {"subscriptions.hosts": host}},{new:true}).exec()
+        const subscribed = await Person.findByIdAndUpdate(host, {$pull: {subscribers: subscriber}}, {new: true}).exec()
+        Person.findByIdAndUpdate(subscriber, {$pull: {"subscriptions.hosts": host}}, {new: true}).exec()
         return subscribed
     },
-    subscribeToTag: async function (tag,subscriber) {
-        const subscribed= await Tag.findByIdAndUpdate(tag, { $addToSet: {subscribers: subscriber}},{new:true}).exec()
-        Person.findByIdAndUpdate(subscriber, { $addToSet: {"subscriptions.tags": tag}},{new:true}).exec()
+    subscribeToTag: async function (tag, subscriber) {
+        const subscribed = await Tag.findByIdAndUpdate(tag, {$addToSet: {subscribers: subscriber}}, {new: true}).exec()
+        Person.findByIdAndUpdate(subscriber, {$addToSet: {"subscriptions.tags": tag}}, {new: true}).exec()
         return subscribed
     },
-    unSubscribeFromTag: async function (tag,subscriber) {
-        const subscribed= await Tag.findByIdAndUpdate(tag, { $pull: {subscribers: subscriber}},{new:true}).exec()
-        Person.findByIdAndUpdate(subscriber, { $pull: {"subscriptions.tags": tag}},{new:true}).exec()
+    unSubscribeFromTag: async function (tag, subscriber) {
+        const subscribed = await Tag.findByIdAndUpdate(tag, {$pull: {subscribers: subscriber}}, {new: true}).exec()
+        Person.findByIdAndUpdate(subscriber, {$pull: {"subscriptions.tags": tag}}, {new: true}).exec()
         return subscribed
     },
     getSubscribers: async function (host) {
