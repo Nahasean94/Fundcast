@@ -133,8 +133,27 @@ const PersonType = new GraphQLObjectType({
         },
         subscriptions: {
             type: new GraphQLList(SubscriptionType),
+        },
+        notifications: {
+            type: new GraphQLList(NotificationType),
         }
     })
+})
+const NotificationType = new GraphQLObjectType({
+    name: 'Notification',
+    fields: () => ({
+        podcast: {
+            type: PodcastType,
+            async resolve(parent, args) {
+                return await queries.findPodcast({id:parent.podcast})
+            }
+        },
+        category: {type: GraphQLString},
+        read: {type: GraphQLString},
+        id: {type: GraphQLString},
+        timestamp: {type: GraphQLString},
+    })
+
 })
 
 const SubscriptionType = new GraphQLObjectType({
@@ -596,6 +615,16 @@ const RootQuery = new GraphQLObjectType({
             args: {tag: {type: GraphQLID}},
             async resolve(parent, args, ctx) {
                 return await queries.getTagSubscribers(args.tag)
+            }
+        },
+        getNotifications: {
+            type: new GraphQLList(NotificationType),
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return await queries.getNotifications(id).then(person => {
+                        return person.notifications
+                    }
+                )
             }
         }
 

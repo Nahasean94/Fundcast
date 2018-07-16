@@ -399,6 +399,9 @@ const queries = {
     getTagSubscribers: async function (tag) {
         return await Tag.findById(tag).exec()
     },
+    getNotifications: async function (id) {
+        return await Person.findById(id).select('notifications').exec()
+    },
 }
 module.exports = queries
 
