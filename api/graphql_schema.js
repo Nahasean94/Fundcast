@@ -124,9 +124,34 @@ const PersonType = new GraphQLObjectType({
                     console.log(err)
                 })
             }
+        },
+        subscribers: {
+            type: new GraphQLList(PersonType),
+            async resolve(parent, args) {
+                return await parent.subscribers.map(async person => await queries.findUser({id: parent.id}))
+            }
+        },
+        subscriptions: {
+            type: new GraphQLList(SubscriptionType),
         }
+    })
+})
 
-
+const SubscriptionType = new GraphQLObjectType({
+    name: 'Subscription',
+    fields: () => ({
+        hosts: {
+            type: new GraphQLList(PersonType),
+            async resolve(parent, args) {
+                return await parent.hosts.map(async person => await queries.findUser({id: person}))
+            }
+        },
+        tags: {
+            type: new GraphQLList(PersonType),
+            async resolve(parent, args) {
+                return await parent.tags.map(async tag => await queries.findTag(tag))
+            }
+        },
     })
 })
 const TagType = new GraphQLObjectType({
@@ -143,8 +168,12 @@ const TagType = new GraphQLObjectType({
                 })
             }
         },
-
-
+        subscribers: {
+            type: new GraphQLList(PersonType),
+            async resolve(parent, args) {
+                return await parent.subscribers.map(async person => await queries.findUser({id: person}))
+            }
+        }
     })
 })
 
@@ -227,9 +256,9 @@ const PodcastType = new GraphQLObjectType({
             type: UploadType,
             async resolve(parent, args) {
                 return await queries.findPodcastFile(parent).then(async podcastFile => {
-                    if(podcastFile){
-                    const {audioFile} = podcastFile
-                    return await queries.findUpload({id: audioFile})
+                    if (podcastFile) {
+                        const {audioFile} = podcastFile
+                        return await queries.findUpload({id: audioFile})
                     }
                 })
 
@@ -239,10 +268,10 @@ const PodcastType = new GraphQLObjectType({
             type: UploadType,
             async resolve(parent, args) {
                 return await queries.findPodcastCoverImage(parent).then(async podcastCoverImage => {
-                    if(podcastCoverImage){
+                    if (podcastCoverImage) {
 
-                    const {coverImage} = podcastCoverImage
-                    return await queries.findUpload({id: coverImage})
+                        const {coverImage} = podcastCoverImage
+                        return await queries.findUpload({id: coverImage})
                     }
                 })
 
@@ -536,30 +565,37 @@ const RootQuery = new GraphQLObjectType({
         },
         searchPodcasts: {
             type: new GraphQLList(PodcastType),
-            args:{search:{type:GraphQLString}},
+            args: {search: {type: GraphQLString}},
             async resolve(parent, args, ctx) {
                 return await queries.searchPodcasts(args.search)
             }
         },
         searchHosts: {
             type: new GraphQLList(PersonType),
-            args:{search:{type:GraphQLString}},
+            args: {search: {type: GraphQLString}},
             async resolve(parent, args, ctx) {
                 return await queries.searchHosts(args.search)
             }
         },
         searchTags: {
             type: new GraphQLList(TagType),
-            args:{search:{type:GraphQLString}},
+            args: {search: {type: GraphQLString}},
             async resolve(parent, args, ctx) {
                 return await queries.searchTags(args.search)
             }
         },
         searchUsers: {
             type: new GraphQLList(PersonType),
-            args:{search:{type:GraphQLString}},
+            args: {search: {type: GraphQLString}},
             async resolve(parent, args, ctx) {
                 return await queries.searchUsers(args.search)
+            }
+        },
+        getTagSubscribers: {
+            type: TagType,
+            args: {tag: {type: GraphQLID}},
+            async resolve(parent, args, ctx) {
+                return await queries.getTagSubscribers(args.tag)
             }
         }
 
@@ -860,24 +896,54 @@ const Mutation = new GraphQLObjectType({
         },
         addHistory: {
             type: PodcastType,
-            args: {podcast_id: {type:GraphQLID}},
+            args: {podcast_id: {type: GraphQLID}},
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
-                return queries.addHistory(args.podcast_id,id).then(async user => {
+                return queries.addHistory(args.podcast_id, id).then(async user => {
                     return await queries.addListens(args.podcast_id)
                 })
             }
         },
         addListens: {
             type: PodcastType,
-            args: {podcast_id: {type:GraphQLID}},
+            args: {podcast_id: {type: GraphQLID}},
             async resolve(parent, args, ctx) {
                 return await queries.addListens(args.podcast_id)
             }
         },
+        subscribeToHost: {
+            type: PersonType,
+            args: {host: {type: GraphQLID}},
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return await queries.subscribeToHost(args.host, id)
+            }
+        },
+        unSubscribeFromHost: {
+            type: PersonType,
+            args: {host: {type: GraphQLID}},
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return await queries.unSubscribeFromHost(args.host, id)
+            }
+        },
+        subscribeToTag: {
+            type: TagType,
+            args: {tag: {type: GraphQLID}},
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return await queries.subscribeToTag(args.tag, id)
+            }
+        },
+        unSubscribeFromTag: {
+            type: TagType,
+            args: {tag: {type: GraphQLID}},
+            async resolve(parent, args, ctx) {
+                const {id} = await authentication.authenticate(ctx)
+                return await queries.unSubscribeFromTag(args.tag, id)
+            }
+        },
     },
-
-
 })
 
 module.exports = new GraphQLSchema({query: RootQuery, mutation: Mutation})

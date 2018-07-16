@@ -336,6 +336,9 @@ const queries = {
             }
         ).exec()
     },
+    findTag: async function (tag) {
+        return await Tag.findById(tag).exec()
+    },
     searchTags: async function (search) {
         return await Tag.find(
             {
@@ -343,7 +346,6 @@ const queries = {
             },
         ).exec()
     },
-
     findAllUsers: async function () {
         return await Person.find({}).exec()
     }
@@ -391,7 +393,36 @@ const queries = {
     },
     findTaggedPodcasts: async function (tag_id) {
         return await Tag.findById(tag_id).select("podcasts").exec()
-    }
+    },
+    subscribeToHost: async function (host,subscriber) {
+        const subscribed= await Person.findByIdAndUpdate(host, { $addToSet: {subscribers: subscriber}},{new:true}).exec()
+        Person.findByIdAndUpdate(subscriber, { $addToSet: {"subscriptions.hosts": host}},{new:true}).exec()
+        return subscribed
+    },
+    unSubscribeFromHost: async function (host, subscriber) {
+        const subscribed = await Person.findByIdAndUpdate(host, { $pull: {subscribers: subscriber}},{new:true}).exec()
+        Person.findByIdAndUpdate(subscriber, { $pull: {"subscriptions.hosts": host}},{new:true}).exec()
+        return subscribed
+    },
+    subscribeToTag: async function (tag,subscriber) {
+        const subscribed= await Tag.findByIdAndUpdate(tag, { $addToSet: {subscribers: subscriber}},{new:true}).exec()
+        Person.findByIdAndUpdate(subscriber, { $addToSet: {"subscriptions.tags": tag}},{new:true}).exec()
+        return subscribed
+    },
+    unSubscribeFromTag: async function (tag,subscriber) {
+        const subscribed= await Tag.findByIdAndUpdate(tag, { $pull: {subscribers: subscriber}},{new:true}).exec()
+        Person.findByIdAndUpdate(subscriber, { $pull: {"subscriptions.tags": tag}},{new:true}).exec()
+        return subscribed
+    },
+    getSubscribers: async function (host) {
+        return await Person.findById(host).select("subscribers").exec()
+    },
+    getSubscriptions: async function (host) {
+        return await Person.findById(host).select("subscriptions").exec()
+    },
+    getTagSubscribers: async function (tag) {
+        return await Tag.findById(tag).exec()
+    },
 }
 module.exports = queries
 

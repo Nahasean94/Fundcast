@@ -53,7 +53,7 @@ const PersonSchema = new Schema({
         ref: 'Podcast',
     }],
     subscriptions: {
-        authors: [{
+        hosts: [{
             type: Schema.Types.ObjectId,
             ref: 'Podcast'
         }],
@@ -62,23 +62,27 @@ const PersonSchema = new Schema({
             ref: 'Podcast'
         }],
     },
+    subscribers: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Person'
+    }],
     notifications: [{
         podcast: {
             type: Schema.Types.ObjectId,
             ref: 'Podcast',
             // unique:[true,'podcast already exists'],
-             required: [true, 'podcast is a required field']
+            required: [true, 'podcast is a required field']
         },
         category: {
             type: String,
             enum: ['tags', 'host'],
-           required: [true, 'category is a required field']
+            required: [true, 'category is a required field']
         },
         read: {
             type: Boolean,
-           default:false,
+            default: false,
         },
-        timestamp:Date
+        timestamp: Date
     }]
 })
 //create the Podcasts Schema (Podcasts table)
@@ -179,7 +183,11 @@ const TagSchema = new Schema({
     }],
     timestamp: {
         type: Date,
-    }
+    },
+    subscribers: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Person'
+    }],
 })
 //create the Comments Schema (Comments table)
 const CommentSchema = new Schema({
