@@ -128,7 +128,7 @@ const PersonType = new GraphQLObjectType({
         subscribers: {
             type: new GraphQLList(PersonType),
             async resolve(parent, args) {
-                return await parent.subscribers.map(async person => await queries.findUser({id: parent.id}))
+                return await parent.subscribers.map(async person => await queries.findUser({id: person}))
             }
         },
         subscriptions: {
