@@ -201,7 +201,8 @@ const queries = {
     },
     addTagNotification: async function (podcast, subscriber) {
         Person.findOneAndUpdate({
-            _id: subscriber
+            _id: subscriber,
+            "notifications.podcast":{$ne:  podcast._id},
         }, {
             $addToSet: {
                 notifications: {
@@ -223,7 +224,8 @@ const queries = {
     },
     addHostNotification: async function (podcast, subscriber) {
         Person.findOneAndUpdate({
-            _id: subscriber
+            _id: subscriber,
+           "notifications.podcast" :{$ne:  podcast._id},
         }, {
             $addToSet: {
                 notifications: {
