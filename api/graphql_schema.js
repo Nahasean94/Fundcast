@@ -145,7 +145,7 @@ const NotificationType = new GraphQLObjectType({
         podcast: {
             type: PodcastType,
             async resolve(parent, args) {
-                return await queries.findPodcast({id:parent.podcast})
+                return await queries.findPodcast({id: parent.podcast})
             }
         },
         category: {type: GraphQLString},
@@ -435,6 +435,33 @@ const RootQuery = new GraphQLObjectType({
             type: new GraphQLList(PersonType),
             resolve() {
                 return queries.findAllHosts()
+            }
+        },
+        getHostsSubscriptions: {
+            type: new GraphQLList(PersonType),
+            args: {id: {type: GraphQLID}},
+            async resolve(parent, args) {
+                return await queries.getSubscriptions(args.id).then(async subscriptions => {
+
+                    if (subscriptions.subscriptions) {
+                        return await subscriptions.subscriptions.hosts.map(subscription => {
+                            return queries.findUser({id: subscription})
+                        })
+                    }
+                })
+            }
+        },
+        getTagsSubscriptions: {
+            type: new GraphQLList(TagType),
+            args: {id: {type: GraphQLID}},
+            async resolve(parent, args) {
+                return await queries.getSubscriptions(args.id).then(async subscriptions => {
+                    if (subscriptions.subscriptions) {
+                        return await subscriptions.subscriptions.tags.map(subscription => {
+                            return queries.findTag(subscription)
+                        })
+                    }
+                })
             }
         },
         tags: {

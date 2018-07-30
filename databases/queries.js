@@ -288,7 +288,8 @@ const queries = {
     ,
     findAllHosts: async function () {
         return await Person.find({role: 'host'}).exec()
-    },
+    }
+    ,
     searchHosts: async function (search) {
         return await Person.find(
             {username: {"$regex": search, "$options": "i"}, role: "host"},
@@ -396,8 +397,8 @@ const queries = {
     getSubscribers: async function (host) {
         return await Person.findById(host).select("subscribers").exec()
     },
-    getSubscriptions: async function (host) {
-        return await Person.findById(host).select("subscriptions").exec()
+    getSubscriptions: async function (id) {
+        return await Person.findById(id).select("subscriptions").exec()
     },
     getTagSubscribers: async function (tag) {
         return await Tag.findById(tag).exec()
