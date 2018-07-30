@@ -180,7 +180,8 @@ const queries = {
             timestamp: new Date(),
             hosts: podcast.hosts,
             tags: podcast.tags,
-            "payment.paid": podcast.paid
+            "payment.paid": podcast.paid,
+            "payment.amount": podcast.amount
         }).save().then(podcast => {
             podcast.hosts.map( host => {
                 this.addPodcastToHost(podcast, host)

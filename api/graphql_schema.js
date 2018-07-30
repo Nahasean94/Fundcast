@@ -815,6 +815,7 @@ const Mutation = new GraphQLObjectType({
                 hosts: {type: new GraphQLList(GraphQLString)},
                 paid: {type: GraphQLInt},
                 tags: {type: new GraphQLList(GraphQLString)},
+                amount: {type: GraphQLInt},
             },
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
