@@ -102,11 +102,13 @@ const queries = {
         }, {new: true}).exec()
     },
     addAudioFile: async function (podcast, audioFile) {
+        console.log(podcast, "pdi")
         return await Podcast.findOneAndUpdate({
             _id: podcast.id
         }, {
             audioFile: audioFile
         }, {new: true}).exec().then(podcast => {
+            console.log(podcast)
             podcast.hosts.map(host => {
                 this.addPodcastToHost(podcast, host)
             })

@@ -214,7 +214,6 @@ const BuyerType = new GraphQLObjectType({
         buyer: {
             type: PersonType,
             async resolve(parent){
-                console.log(parent)
                 return await queries.findUser({id:parent.buyer})
             }
         },
