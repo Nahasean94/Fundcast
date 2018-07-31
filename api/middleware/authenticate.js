@@ -16,7 +16,7 @@ module.exports = {
         }
         if (token) {
             return await jwt.verify(token, config.jwtSecret, async (err, decoded) => {
-                if (err | decoded.role !== 'host') {
+                if (err) {
                     return {error: 'Failed to authenticate'}
                 }
                 else {
@@ -31,7 +31,7 @@ module.exports = {
     },
     login: async (args) => {
         const {email, password} = args
-        return await Person.findOne({email: email}).select('email password username role').exec().then(function (person) {
+        return await Person.findOne({email: email}).select('email password username role ethereum_address').exec().then(function (person) {
             if (person) {
                 if (bcrypt.compareSync(password, person.password)) {
                     return {
@@ -41,6 +41,7 @@ module.exports = {
                             email: person.email,
                             username: person.username,
                             role: person.role,
+                            ethereum_address:person.ethereum_address
                         }, config.jwtSecret),
                         error: null
                     }
