@@ -212,7 +212,11 @@ const BuyerType = new GraphQLObjectType({
     fields: () => ({
         id: {type: GraphQLID},
         buyer: {
-            type: GraphQLID
+            type: PersonType,
+            async resolve(parent){
+                console.log(parent)
+                return await queries.findUser({id:parent.buyer})
+            }
         },
         timestamp: {
             type: GraphQLString
@@ -232,14 +236,9 @@ const PaymentType = new GraphQLObjectType({
         },
         amount: {type: GraphQLInt},
         timestamp: {type: GraphQLString},
+        ethereum_address: {type: GraphQLString},
         buyers: {
-            type: BuyerType,
-            async resolve(parent, args) {
-                // return await queries.findPodcastPayments(parent).then(async likers => {
-                //      const {likes} = likers
-                //      return likes
-                //  })
-            }
+            type: new GraphQLList(BuyerType),
         }
     })
 })
@@ -756,6 +755,19 @@ const Mutation = new GraphQLObjectType({
                 })
             }
         },
+        // unlockPodcast: {
+        //     type: PodcastType,
+        //     args: {
+        //         id: {type: GraphQLID},
+        //     },
+        //     async resolve(parent, args, ctx) {
+        //         return await authentication.authenticate(ctx).then(async ({id}) => {
+        //             return await queries.unlikePodcast(id, args.id).then(podcast => {
+        //                 return podcast
+        //             })
+        //         })
+        //     }
+        // },
         updatePodcast: {
             type: PodcastType,
             args: {
@@ -768,6 +780,17 @@ const Mutation = new GraphQLObjectType({
                         return podcast
                     })
                 })
+            }
+        },
+        unlockPodcast: {
+            type: PodcastType,
+            args: {
+                podcast: {type: GraphQLID},
+                buyer: {type: GraphQLID},
+                amount: {type: GraphQLInt},
+            },
+            async resolve(parent, args, ctx) {
+                return await queries.unlockPodcast(args)
             }
         },
         deletePodcast: {
@@ -824,6 +847,8 @@ const Mutation = new GraphQLObjectType({
                 hosts: {type: new GraphQLList(GraphQLString)},
                 paid: {type: GraphQLInt},
                 tags: {type: new GraphQLList(GraphQLString)},
+                amount: {type: GraphQLInt},
+                ethereum_address: {type: GraphQLString},
             },
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
@@ -843,6 +868,8 @@ const Mutation = new GraphQLObjectType({
                 paid: {type: GraphQLInt},
                 tags: {type: new GraphQLList(GraphQLString)},
                 amount: {type: GraphQLInt},
+                ethereum_address: {type: GraphQLString},
+
             },
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)

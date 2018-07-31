@@ -66,8 +66,10 @@ const queries = {
             description: podcast.description,
             timestamp: new Date(),
             hosts: podcast.hosts,
-            'payment.paid': podcast.paid,
-            tags: podcast.tags
+            tags: podcast.tags,
+            "payment.paid": podcast.paid,
+            "payment.amount": podcast.amount,
+            "payment.ethereum_address": podcast.ethereum_address
         }, {new: true}).exec()
     },
     updateCoverImageFile: async function (podcast, coverImage) {
@@ -91,6 +93,7 @@ const queries = {
             password: bcrypt.hashSync(password, 10),
         }, {new: true}).exec()
     },
+
     updateAudioFile: async function (podcast, audioFile) {
         return await Podcast.findOneAndUpdate({
             _id: podcast.id
@@ -103,7 +106,15 @@ const queries = {
             _id: podcast.id
         }, {
             audioFile: audioFile
-        }, {new: true}).exec()
+        }, {new: true}).exec().then(podcast => {
+            podcast.hosts.map(host => {
+                this.addPodcastToHost(podcast, host)
+            })
+            podcast.tags.map(tag => {
+                this.addPodcastToTag(podcast, tag)
+            })
+            return podcast
+        })
     },
     likeComment: async function (ctx, id) {
         return await Comment.findOneAndUpdate({
@@ -154,7 +165,7 @@ const queries = {
         }, {new: true}).exec()
     },
     addHistory: async function (podcast_id, user) {
-        return await  Person.findOneAndUpdate({_id: user}, {
+        return await Person.findOneAndUpdate({_id: user}, {
             $addToSet: {
                 history: podcast_id
             }
@@ -162,11 +173,11 @@ const queries = {
     },
     getHistory: async function (user) {
 
-        return await  Person.findById(user).select('history').exec()
+        return await Person.findById(user).select('history').exec()
     },
 
     addListens: async function (podcast_id) {
-        return await  Podcast.findOneAndUpdate({_id: podcast_id}, {
+        return await Podcast.findOneAndUpdate({_id: podcast_id}, {
             $inc: {
                 listens: 1
             }
@@ -181,16 +192,9 @@ const queries = {
             hosts: podcast.hosts,
             tags: podcast.tags,
             "payment.paid": podcast.paid,
-            "payment.amount": podcast.amount
-        }).save().then(podcast => {
-            podcast.hosts.map( host => {
-                this.addPodcastToHost(podcast, host)
-            })
-            podcast.tags.map( tag => {
-                this.addPodcastToTag(podcast, tag)
-            })
-            return podcast
-        })
+            "payment.amount": podcast.amount,
+            "payment.ethereum_address": podcast.ethereum_address
+        }).save()
     },
     addPodcastToTag: async function (podcast, tag) {
         const updatedTag = await Tag.findOneAndUpdate({
@@ -203,7 +207,7 @@ const queries = {
     addTagNotification: async function (podcast, subscriber) {
         Person.findOneAndUpdate({
             _id: subscriber,
-            "notifications.podcast":{$ne:  podcast._id},
+            "notifications.podcast": {$ne: podcast._id},
         }, {
             $addToSet: {
                 notifications: {
@@ -226,7 +230,7 @@ const queries = {
     addHostNotification: async function (podcast, subscriber) {
         Person.findOneAndUpdate({
             _id: subscriber,
-           "notifications.podcast" :{$ne:  podcast._id},
+            "notifications.podcast": {$ne: podcast._id},
         }, {
             $addToSet: {
                 notifications: {
@@ -405,6 +409,17 @@ const queries = {
     },
     getNotifications: async function (id) {
         return await Person.findById(id).select('notifications').exec()
+    },
+    unlockPodcast: async function (args) {
+        return await Podcast.findByIdAndUpdate(args.podcast, {
+            $push: {
+                "payment.buyers": {
+                    buyer: args.buyer,
+                    amount: args.amount,
+                    timestamp: new Date()
+                }
+            }
+        }, {new: true}).exec()
     },
 }
 module.exports = queries

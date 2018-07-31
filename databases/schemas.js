@@ -139,6 +139,7 @@ const PodcastSchema = new Schema({
             required: [true, "paid is required. (either 'true' or 'false')"]
         },
         amount: Number,
+        ethereum_address: String,
         buyers: [{
             buyer: {
                 type: Schema.Types.ObjectId,
