@@ -55,40 +55,40 @@ const getMeta = async (file) => {
     const {stream, filename} = await file
     return {stream, filename}
 }
-const createNewPodcast = async (newPodcast, uploader) => {
-
-    const podcastId = shortid.generate()
-    const coverImageId = shortid.generate()
-
-
-    const coverImageName = async () => {
-        let {filename} = await getMeta(newPodcast.coverImage)
-        return filename
-    }
-    const podcastName = async () => {
-        let {filename} = await getMeta(newPodcast.podcast)
-        return filename
-    }
-    const podcastPath = `${uploader}/${podcastId}-${await podcastName()}`
-    const coverImagePath = `${uploader}/${coverImageId}-${await coverImageName()}`
-    const audioFile = await storeFS(await getMeta(newPodcast.podcast), await getMeta(newPodcast.podcast), podcastId, uploader).then(async () =>
-        queries.storeUpload(podcastPath, newPodcast.title, uploader))
-
-    const coverImage = await storeFS(await getMeta(newPodcast.coverImage), await getMeta(newPodcast.coverImage), coverImageId, uploader).then(async () =>
-        queries.storeUpload(coverImagePath, newPodcast.title, uploader))
-    const finalPodcast = {
-        title: newPodcast.title,
-        description: newPodcast.description,
-        timestamp: new Date(),
-        hosts: newPodcast.hosts,
-        tags: newPodcast.tags,
-        status: "original",
-        coverImage: coverImage.id,
-        audioFile: audioFile.id,
-        paid: newPodcast.paid
-    }
-    return await queries.createNewPodcast(uploader, finalPodcast)
-}
+// const createNewPodcast = async (newPodcast, uploader) => {
+//
+//     const podcastId = shortid.generate()
+//     const coverImageId = shortid.generate()
+//
+//
+//     const coverImageName = async () => {
+//         let {filename} = await getMeta(newPodcast.coverImage)
+//         return filename
+//     }
+//     const podcastName = async () => {
+//         let {filename} = await getMeta(newPodcast.podcast)
+//         return filename
+//     }
+//     const podcastPath = `${uploader}/${podcastId}-${await podcastName()}`
+//     const coverImagePath = `${uploader}/${coverImageId}-${await coverImageName()}`
+//     const audioFile = await storeFS(await getMeta(newPodcast.podcast), await getMeta(newPodcast.podcast), podcastId, uploader).then(async () =>
+//         queries.storeUpload(podcastPath, newPodcast.title, uploader))
+//
+//     const coverImage = await storeFS(await getMeta(newPodcast.coverImage), await getMeta(newPodcast.coverImage), coverImageId, uploader).then(async () =>
+//         queries.storeUpload(coverImagePath, newPodcast.title, uploader))
+//     const finalPodcast = {
+//         title: newPodcast.title,
+//         description: newPodcast.description,
+//         timestamp: new Date(),
+//         hosts: newPodcast.hosts,
+//         tags: newPodcast.tags,
+//         status: "original",
+//         coverImage: coverImage.id,
+//         audioFile: audioFile.id,
+//         paid: newPodcast.paid
+//     }
+//     return await queries.createNewPodcast(uploader, finalPodcast)
+// }
 
 //process the profile picture
 const processProfilePicture = async (upload, uploader) => {
@@ -99,7 +99,7 @@ const processProfilePicture = async (upload, uploader) => {
         queries.storeProfilePicture(path, uploader))
 }
 
-
+//Creates the person type with all necessary database fields
 const PersonType = new GraphQLObjectType({
     name: 'Person',
     fields: () => ({
@@ -139,6 +139,7 @@ const PersonType = new GraphQLObjectType({
         }
     })
 })
+//Creates the notification type with all necessary database fields
 const NotificationType = new GraphQLObjectType({
     name: 'Notification',
     fields: () => ({
@@ -155,7 +156,7 @@ const NotificationType = new GraphQLObjectType({
     })
 
 })
-
+//Creates the subscription type with all necessary database fields
 const SubscriptionType = new GraphQLObjectType({
     name: 'Subscription',
     fields: () => ({
@@ -173,6 +174,7 @@ const SubscriptionType = new GraphQLObjectType({
         },
     })
 })
+//Creates the tag type with all necessary database fields
 const TagType = new GraphQLObjectType({
     name: 'Tag',
     fields: () => ({
@@ -195,7 +197,7 @@ const TagType = new GraphQLObjectType({
         }
     })
 })
-
+//Creates the upload type with all necessary database fields
 const UploadType = new GraphQLObjectType({
     name: 'Uploads',
     fields: () => ({
@@ -207,6 +209,7 @@ const UploadType = new GraphQLObjectType({
         timestamp: {type: GraphQLString},
     })
 })
+//Creates the buyer type with all necessary database fields
 const BuyerType = new GraphQLObjectType({
     name: 'Buyer',
     fields: () => ({
@@ -225,7 +228,7 @@ const BuyerType = new GraphQLObjectType({
         },
     })
 })
-
+//Creates the payment type with all necessary database fields
 const PaymentType = new GraphQLObjectType({
     name: 'Payment',
     fields: () => ({
@@ -241,6 +244,7 @@ const PaymentType = new GraphQLObjectType({
         }
     })
 })
+//Creates the podcast type with all necessary database fields
 const PodcastType = new GraphQLObjectType({
     name: 'Podcast',
     fields: () => ({
@@ -318,6 +322,7 @@ const PodcastType = new GraphQLObjectType({
         }
     })
 })
+//Creates the like type with all necessary database fields
 const LikeType = new GraphQLObjectType({
     name: 'Like',
     fields: () => ({
@@ -331,6 +336,7 @@ const LikeType = new GraphQLObjectType({
         timestamp: {type: GraphQLString},
     })
 })
+//Creates the comment replies type with all necessary database fields
 const CommentRepliesType = new GraphQLObjectType({
     name: 'CommentReplies',
     fields: () => ({
@@ -352,6 +358,7 @@ const CommentRepliesType = new GraphQLObjectType({
         timestamp: {type: GraphQLString},
     })
 })
+//Creates the comment type with all necessary database fields
 const CommentType = new GraphQLObjectType({
     name: 'Comment',
     fields: () => ({
@@ -384,6 +391,7 @@ const CommentType = new GraphQLObjectType({
         timestamp: {type: GraphQLString},
     })
 })
+//Creates the token type with all necessary  fields
 const TokenType = new GraphQLObjectType({
     name: 'Token',
     fields: () => ({
@@ -392,6 +400,7 @@ const TokenType = new GraphQLObjectType({
         error: {type: GraphQLString}
     })
 })
+//Creates the password type with all necessary  fields
 const PasswordType = new GraphQLObjectType({
     name: 'Password',
     fields: () => ({
@@ -400,19 +409,15 @@ const PasswordType = new GraphQLObjectType({
         },
     })
 })
+//Creates the isUserExistsType type with all necessary fields
 const isUserExistsType = new GraphQLObjectType({
     name: 'isUserExists',
     fields: () => ({
         exists: {type: GraphQLBoolean},
     })
 })
-const UploadProfilePictureType = new GraphQLObjectType({
-    name: 'UpdloadProfilePicture',
-    fields: () => ({
-        uploaded: {type: GraphQLBoolean},
-    })
-})
 
+//Root Query object contains code to handle all get queries to the server
 const RootQuery = new GraphQLObjectType({
     name: 'RootQueryType',
     fields: {
@@ -655,6 +660,7 @@ const RootQuery = new GraphQLObjectType({
 
     }
 })
+//Root Mutation object contains code to handle all post queries to the server
 const Mutation = new GraphQLObjectType({
     name: 'Mutation',
     fields: {
@@ -754,19 +760,6 @@ const Mutation = new GraphQLObjectType({
                 })
             }
         },
-        // unlockPodcast: {
-        //     type: PodcastType,
-        //     args: {
-        //         id: {type: GraphQLID},
-        //     },
-        //     async resolve(parent, args, ctx) {
-        //         return await authentication.authenticate(ctx).then(async ({id}) => {
-        //             return await queries.unlikePodcast(id, args.id).then(podcast => {
-        //                 return podcast
-        //             })
-        //         })
-        //     }
-        // },
         updatePodcast: {
             type: PodcastType,
             args: {
@@ -819,24 +812,24 @@ const Mutation = new GraphQLObjectType({
                 })
             }
         },
-        newPodcast: {
-            type: PodcastType,
-            args: {
-                title: {type: GraphQLString},
-                description: {type: GraphQLString},
-                hosts: {type: new GraphQLList(GraphQLString)},
-                paid: {type: GraphQLInt},
-                tags: {type: new GraphQLList(GraphQLString)},
-                coverImage: {type: GraphQLUpload},
-                podcast: {type: GraphQLUpload},
-            },
-            async resolve(parent, args, ctx) {
-                const {id} = await authentication.authenticate(ctx)
-                if (id) {
-                    return await promisesAll(createNewPodcast(args, id))
-                }
-            }
-        },
+        // newPodcast: {
+        //     type: PodcastType,
+        //     args: {
+        //         title: {type: GraphQLString},
+        //         description: {type: GraphQLString},
+        //         hosts: {type: new GraphQLList(GraphQLString)},
+        //         paid: {type: GraphQLInt},
+        //         tags: {type: new GraphQLList(GraphQLString)},
+        //         coverImage: {type: GraphQLUpload},
+        //         podcast: {type: GraphQLUpload},
+        //     },
+        //     async resolve(parent, args, ctx) {
+        //         const {id} = await authentication.authenticate(ctx)
+        //         if (id) {
+        //             return await promisesAll(createNewPodcast(args, id))
+        //         }
+        //     }
+        // },
         updateBasicInfo: {
             type: PodcastType,
             args: {
@@ -1028,5 +1021,5 @@ const Mutation = new GraphQLObjectType({
         },
     },
 })
-
+//Export the module for use in the server file
 module.exports = new GraphQLSchema({query: RootQuery, mutation: Mutation})

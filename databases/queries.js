@@ -7,10 +7,17 @@ const {Person, Comment, Upload, Podcast, Tag} = require('./schemas')//import var
 const mongoose = require('mongoose')//import mongoose library
 const bcrypt = require('bcrypt')//import bcrypt to assist hashing passwords
 //Connect to Mongodb
-
 mongoose.connect('mongodb://localhost/fundcast', {promiseLibrary: global.Promise})
-
+/**
+ *
+ * @type {{deletePodcast: (function(*, *=)), storeUpload: (function(*=, *=, *=): *), publishPodcast: (function(*=)), unPublishPodcast: (function(*=)), updateProfileBasicInfo: (function(*=, *)), storeComment: (function(*=, *): *), updateBasicInfo: (function(*)), updateCoverImageFile: (function(*, *=)), addCoverImageFile: (function(*, *=)), changePassword: (function(*=, *=)), updateAudioFile: (function(*, *=)), addAudioFile: (function(*=, *=): any), unlikePodcast: (function(*=, *=)), likePodcast: (function(*=, *=)), addHistory: (function(*=, *=)), getHistory: (function(*=)), addListens: (function(*=)), addBasicInfo: (function(*): *), addPodcastToTag: queries.addPodcastToTag, storeProfilePicture: (function(*=, *=): *), addTagNotification: queries.addTagNotification, addPodcastToHost: queries.addPodcastToHost, addHostNotification: queries.addHostNotification, signup: (function(*): *), getPassword: (function(*=)), findPublishedPodcasts: (function(): *), fetchPodcastsByTags: (function(*)), findAllHosts: (function(): *), searchHosts: (function(*=): *), searchUsers: (function(*=): *), searchPodcasts: (function(*=): *), findTag: (function(*=)), searchTags: (function(*=): *), findAllUsers: (function(): *), findPodcast: (function(*)), findPodcastLikes: (function(*)), findPodcastComments: (function(*=): *), findComment: (function(*)), findLikedPodcasts: (function(*)), findUpload: (function(*)), findUser: (function(*)), isUserExists: (function(*)), findPodcastFile: (function(*)), findPodcastCoverImage: (function(*)), findAllTags: (function(): *), findTaggedPodcasts: (function(*=)), subscribeToHost: (function(*=, *=)), unSubscribeFromHost: (function(*=, *=)), subscribeToTag: (function(*=, *=)), unSubscribeFromTag: (function(*=, *=)), getSubscribers: (function(*=)), getSubscriptions: (function(*=)), getTagSubscribers: (function(*=)), getNotifications: (function(*=)), unlockPodcast: (function(*))}}
+ * //The queries object to contain all the functions that will CRUD data on the database.
+ */
 const queries = {
+    /**No need for detailed commenting here, all functions have names that describe what they do. The functions also received named arguments when the argumetns are few, and args keyword used when they are many, to be broken down inside the function.
+     * Being database operations, promises are heavily used.
+**/
+
     deletePodcast: async function (author, podcast_id) {
         Podcast.findById(podcast_id).then(podcast => {
             podcast.hosts.map(host => {
@@ -93,7 +100,6 @@ const queries = {
             password: bcrypt.hashSync(password, 10),
         }, {new: true}).exec()
     },
-
     updateAudioFile: async function (podcast, audioFile) {
         return await Podcast.findOneAndUpdate({
             _id: podcast.id
@@ -118,22 +124,8 @@ const queries = {
             return podcast
         })
     },
-    likeComment: async function (ctx, id) {
-        return await Comment.findOneAndUpdate({
-            _id: id,
-            author: {$ne: ctx.currentUser.id},
-            'likes.liked_by': {$ne: ctx.currentUser.id}
-
-        }, {
-            $push: {
-                likes: {
-                    liked_by: ctx.currentUser.id
-                }
-            }
-        }, {new: true}).exec()
-    },
     unlikePodcast: async function (unliker, id) {
-        Person.findOneAndUpdate({_id: liker}, {
+        Person.findOneAndUpdate({_id: unliker}, {
             $pull: {
                 liked_podcasts: id
             }
@@ -177,7 +169,6 @@ const queries = {
 
         return await Person.findById(user).select('history').exec()
     },
-
     addListens: async function (podcast_id) {
         return await Podcast.findOneAndUpdate({_id: podcast_id}, {
             $inc: {
@@ -185,7 +176,6 @@ const queries = {
             }
         }, {new: true}).exec()
     },
-
     addBasicInfo: async function (podcast) {
         return await new Podcast({
             title: podcast.title,
@@ -204,6 +194,14 @@ const queries = {
         }, {$push: {podcasts: podcast._id}}, {upsert: true}).exec()
         updatedTag.subscribers.map(subscriber => {
             this.addTagNotification(podcast, subscriber)
+        })
+    },
+    storeProfilePicture: async function (path, uploader) {
+        return await new Upload({
+            caption: 'Profile Picture',
+            path: path,
+            uploader: uploader,
+            timestamp: new Date()
         })
     },
     addTagNotification: async function (podcast, subscriber) {
@@ -253,49 +251,19 @@ const queries = {
             profile_picture: 'default.jpg',
             date_joined: new Date()
         }).save()
-    }
-    ,
-// findComments: async function (podcast_id) {
-//     return await Comment.find({podcast: podcast_id}).select('author body timestamp').exec()
-//
-// },
-    findPodcasts: async function (ctx) {
-        return await Podcast.find({
-            $or: [{
-                author: ctx.currentUser.id,
-            },
-                {
-                    profile: ctx.currentUser.id
-                }]
-        }).populate('uploads').populate('author', 'username profile_picture').populate('profile', 'username profile_picture').limit(2).exec()
-    },
-    findUserPodcasts: async function (args) {
-        // return await Person.findById(args).select("podcasts").sort({timestamp: -1}).exec()
-        return await Person.findById(args).select("podcasts").exec()
-    }
-
-    ,
-    findUsers: async function () {
-        return await Person.find({}).exec()
     },
     getPassword: async function (id) {
         return await Person.findById(id).select("password").exec()
-    }
-    ,
-    findAllPodcasts: async function () {
-        return await Podcast.find({}).sort({timestamp: -1}).exec()
     },
     findPublishedPodcasts: async function () {
         return await Podcast.find({publishing: 'published'}).sort({timestamp: -1}).exec()
     },
     fetchPodcastsByTags: async function (args) {
         return await Tag.findById(args.id).select("podcasts").exec()
-    }
-    ,
+    },
     findAllHosts: async function () {
         return await Person.find({role: 'host'}).exec()
-    }
-    ,
+    },
     searchHosts: async function (search) {
         return await Person.find(
             {username: {"$regex": search, "$options": "i"}, role: "host"},
@@ -334,40 +302,31 @@ const queries = {
     },
     findAllUsers: async function () {
         return await Person.find({}).exec()
-    }
-    ,
+    },
     findPodcast: async function (args) {
         return await Podcast.findById(args.id).exec()
-    }
-    ,
+    },
     findPodcastLikes: async function (args) {
         return await Podcast.findById(args._id).select('likes').exec()
-    }
-    ,
+    },
     findPodcastComments: async function (args) {
         return await Comment.find({podcast: args}).sort({timestamp: -1}).exec()
-    }
-    ,
+    },
     findComment: async function (args) {
         return await Comment.findById(args.id).exec()
-    }
-    ,
+    },
     findLikedPodcasts: async function (args) {
         return await Person.findById(args.id).select('liked_podcasts').exec()
-    }
-    ,
+    },
     findUpload: async function (args) {
         return await Upload.findById(args.id).exec()
-    }
-    ,
+    },
     findUser: async function (args) {
         return await Person.findById(args.id).exec()
-    }
-    ,
+    },
     isUserExists: async function (args) {
         return await Person.findOne({email: args.email}).exec()
-    }
-    ,
+    },
     findPodcastFile: async function (args) {
         return await Podcast.findById(args._id).select('audioFile').exec()
     },
@@ -425,5 +384,3 @@ const queries = {
     },
 }
 module.exports = queries
-
-//TODO add podcasts that a person writes, and ones written on their wall to be inside the podcast array of one's document(record)
