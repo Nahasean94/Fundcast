@@ -186,7 +186,7 @@ const AdminSchema = new Schema({
 const FaqsSchema = new Schema({
     question: {
         type: String,
-        unique: [true, "Question already exists"],
+        // unique: [true, "Question already exists"],
     },
     answer: {
         type: String,

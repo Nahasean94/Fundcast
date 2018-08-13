@@ -164,6 +164,17 @@ const AboutType = new GraphQLObjectType({
     })
 
 })
+//Creates the about type with all necessary database fields
+const FaqsType = new GraphQLObjectType({
+    name: 'Faqs',
+    fields: () => ({
+        id: {type: GraphQLID},
+        question: {type: GraphQLString},
+        answer: {type: GraphQLString},
+        timestamp: {type: GraphQLString},
+    })
+
+})
 //Creates the subscription type with all necessary database fields
 const SubscriptionType = new GraphQLObjectType({
     name: 'Subscription',
@@ -697,7 +708,6 @@ const RootQuery = new GraphQLObjectType({
         getFaqs: {
             type: new GraphQLList(FaqsType),
             async resolve(parent, args, ctx) {
-
                 return await queries.getFaqs()
             }
         }
@@ -1092,6 +1102,17 @@ const Mutation = new GraphQLObjectType({
                 return await authentication.adminLogin(args).then(login => {
                     return login
                 })
+
+            }
+        },
+        newFaq: {
+            type: FaqsType,
+            args: {
+                question: {type: GraphQLString},
+                answer: {type: GraphQLString}
+            },
+            async resolve(parent, args, ctx) {
+                return await queries.newFaq(args)
 
             }
         },

@@ -400,8 +400,8 @@ const queries = {
     getFaqs: async function () {
         return Faqs.find({}).exec()
     },
-    addFaq: async function (faq) {
-        return await  new Faqs({question:faq.question,answer:faq.answer}).save()
+    newFaq: async function (faq) {
+        return await new Faqs({question: faq.question, answer: faq.answer, timestamp: new Date()}).save()
     },
 }
 
