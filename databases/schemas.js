@@ -170,6 +170,34 @@ const UploadSchema = new Schema({
         type: Date,
     }
 })
+//Create the admin schema
+const AdminSchema = new Schema({
+    username: {
+        type: String,
+        unique: [true, "username already exists"],
+    },
+    password: {
+        type: String,
+        required: [true, 'Password is a required field']
+    },
+    timestamp: Date,
+})
+//Create the Faqs schema
+const FaqsSchema = new Schema({
+    question: {
+        type: String,
+        unique: [true, "Question already exists"],
+    },
+    answer: {
+        type: String,
+        required: [true, 'Answer is a required field']
+    },
+    timestamp: Date,
+})
+//Create the about schema
+const AboutSchema = new Schema({
+    about: String,
+})
 //create the Tags Schema (Tags table)
 const TagSchema = new Schema({
     name: {
@@ -243,7 +271,11 @@ const Comment = mongoose.model('Comment', CommentSchema)
 const Podcast = mongoose.model('Podcast', PodcastSchema)
 const Tag = mongoose.model('Tag', TagSchema)
 const Upload = mongoose.model('Upload', UploadSchema)
+const Admin = mongoose.model('Admin', AdminSchema)
+const About = mongoose.model('About', AboutSchema)
+const Faqs = mongoose.model('Faqs', FaqsSchema)
+
 //export the above models to used in other files
 module.exports = {
-    Person, Comment, Upload, Podcast, Tag
+    Person, Comment, Upload, Podcast, Tag,Admin,About,Faqs
 }

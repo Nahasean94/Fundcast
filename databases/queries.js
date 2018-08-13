@@ -3,7 +3,7 @@
  */
 
 "use strict"
-const {Person, Comment, Upload, Podcast, Tag} = require('./schemas')//import various models
+const {Person, Comment, Upload, Podcast, Tag, Admin, About, Faqs} = require('./schemas')//import various models
 const mongoose = require('mongoose')//import mongoose library
 const bcrypt = require('bcrypt')//import bcrypt to assist hashing passwords
 //Connect to Mongodb
@@ -16,8 +16,7 @@ mongoose.connect('mongodb://localhost/fundcast', {promiseLibrary: global.Promise
 const queries = {
     /**No need for detailed commenting here, all functions have names that describe what they do. The functions also received named arguments when the argumetns are few, and args keyword used when they are many, to be broken down inside the function.
      * Being database operations, promises are heavily used.
-**/
-
+     **/
     deletePodcast: async function (author, podcast_id) {
         Podcast.findById(podcast_id).then(podcast => {
             podcast.hosts.map(host => {
@@ -382,5 +381,29 @@ const queries = {
             }
         }, {new: true}).exec()
     },
+    adminExists: async function (court_station) {
+        return await Admin.find({}).exec()
+    },
+    registerAdmin: async function (userInfo) {
+        return await new Admin({
+            password: bcrypt.hashSync(userInfo.password, 10),
+            username: userInfo.username,
+            timestamp: new Date()
+        }).save()
+    },
+    getAbout: async function () {
+        return About.findOne({}).exec()
+    },
+    updateAbout: async function (about) {
+        return About.findOneAndUpdate({}, {about: about}, {upsert: true}).exec()
+    },
+    getFaqs: async function () {
+        return Faqs.find({}).exec()
+    },
+    addFaq: async function (faq) {
+        return await  new Faqs({question:faq.question,answer:faq.answer}).save()
+    },
 }
+
+// queries.addAbout()
 module.exports = queries

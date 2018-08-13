@@ -6,7 +6,7 @@
 //Import various modules needed
 const jwt = require('jsonwebtoken')
 const config = require('../config')
-const {Person} = require('../../databases/schemas')
+const {Person,Admin} = require('../../databases/schemas')
 const mongoose = require('mongoose')
 const bcrypt = require('bcrypt')
 
@@ -80,6 +80,51 @@ module.exports = {
                 ok: false,
                 token: null,
                 error: 'No user with such credentials exists. Please check your email and password and try again.'
+            }
+        }).catch(function (err) {
+            return {
+                ok: false,
+                token: null,
+                error: err
+            }
+        })
+    },
+    /**
+     * * @param args
+     * @return {Promise<any | never | {ok: boolean, token: null, error: any}>}
+     *
+     * This module receives login credentials, and checks whether the user exists and then verifies the password.
+     * Responses are sent depending on whether the login credentials match any in the database.
+     */
+    adminLogin: async (args) => {
+        const {username, password} = args//breaks down the arguments
+        //Goes into the Admin table and finds a user with the given email, and selects their username, and password.
+        return await Admin.findOne({username: username}).select('password username').exec().then(function (person) {
+            if (person) {
+                //Compares the hash of the stored password and one passed in the request. If they match, return a token with email, id, username, role and ethereum_address encoded into it for use the front end.
+                if (bcrypt.compareSync(password, person.password)) {
+                    return {
+                        ok: true,
+                        token: jwt.sign({
+                            id: person._id,
+                            username: person.username,
+                            role: 'admin',
+                        }, config.jwtSecret),
+                        error: null
+                    }
+                }
+                //If passwords don't match, return a login failure message below
+                return {
+                    ok: false,
+                    token: null,
+                    error: 'No user with such credentials exists. Please check your username and password and try again.'
+                }
+            }
+            //If not user with the given email matches any records in the database, return a login error with the message below.
+            return {
+                ok: false,
+                token: null,
+                error: 'No user with such credentials exists. Please check your username and password and try again.'
             }
         }).catch(function (err) {
             return {

@@ -156,6 +156,14 @@ const NotificationType = new GraphQLObjectType({
     })
 
 })
+//Creates the about type with all necessary database fields
+const AboutType = new GraphQLObjectType({
+    name: 'About',
+    fields: () => ({
+        about: {type: GraphQLString},
+    })
+
+})
 //Creates the subscription type with all necessary database fields
 const SubscriptionType = new GraphQLObjectType({
     name: 'Subscription',
@@ -216,8 +224,8 @@ const BuyerType = new GraphQLObjectType({
         id: {type: GraphQLID},
         buyer: {
             type: PersonType,
-            async resolve(parent){
-                return await queries.findUser({id:parent.buyer})
+            async resolve(parent) {
+                return await queries.findUser({id: parent.buyer})
             }
         },
         timestamp: {
@@ -358,6 +366,14 @@ const CommentRepliesType = new GraphQLObjectType({
         timestamp: {type: GraphQLString},
     })
 })
+const AdminType = new GraphQLObjectType({
+    name: 'Admin',
+    fields: () => ({
+        id: {type: GraphQLID},
+        username: {type: GraphQLString},
+        timestamp: {type: GraphQLString},
+    })
+})
 //Creates the comment type with all necessary database fields
 const CommentType = new GraphQLObjectType({
     name: 'Comment',
@@ -409,8 +425,8 @@ const PasswordType = new GraphQLObjectType({
         },
     })
 })
-//Creates the isUserExistsType type with all necessary fields
-const isUserExistsType = new GraphQLObjectType({
+//Creates the ExistsType type with all necessary fields
+const ExistsType = new GraphQLObjectType({
     name: 'isUserExists',
     fields: () => ({
         exists: {type: GraphQLBoolean},
@@ -426,6 +442,19 @@ const RootQuery = new GraphQLObjectType({
             args: {id: {type: GraphQLID}},
             resolve(parent, args) {
                 return queries.findUser({id: args.id})
+            }
+        },
+        adminExists: {
+            type: ExistsType,
+            resolve(parent, args) {
+                return queries.adminExists().then(admin => {
+                    if (admin.length > 0) {
+                        return {exists: true}
+                    }
+                    return {
+                        exists: false
+                    }
+                })
             }
         },
         people: {
@@ -652,9 +681,24 @@ const RootQuery = new GraphQLObjectType({
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
                 return await queries.getNotifications(id).then(person => {
-                        return person.notifications
+                        if (person)
+                            return person.notifications
                     }
                 )
+            }
+        },
+        getAbout: {
+            type: AboutType,
+            async resolve(parent, args, ctx) {
+
+                return await queries.getAbout()
+            }
+        },
+        getFaqs: {
+            type: new GraphQLList(FaqsType),
+            async resolve(parent, args, ctx) {
+
+                return await queries.getFaqs()
             }
         }
 
@@ -691,7 +735,7 @@ const Mutation = new GraphQLObjectType({
             }
         },
         isUserExists: {
-            type: isUserExistsType,
+            type: ExistsType,
             args: {
                 email: {type: GraphQLString},
             },
@@ -701,6 +745,25 @@ const Mutation = new GraphQLObjectType({
 
                 })
 
+            }
+        },
+        registerAdmin: {
+            type: AdminType,
+            args: {
+                username: {type: GraphQLString},
+                password: {type: GraphQLString},
+            },
+            async resolve(parent, args, ctx) {
+                return await queries.registerAdmin(args)
+            }
+        },
+        updateAbout: {
+            type: AboutType,
+            args: {
+                about: {type: GraphQLString},
+            },
+            async resolve(parent, args, ctx) {
+                return await queries.updateAbout(args.about)
             }
         },
         signup: {
@@ -1017,6 +1080,19 @@ const Mutation = new GraphQLObjectType({
             async resolve(parent, args, ctx) {
                 const {id} = await authentication.authenticate(ctx)
                 return await queries.unSubscribeFromTag(args.tag, id)
+            }
+        },
+        adminLogin: {
+            type: TokenType,
+            args: {
+                username: {type: GraphQLString},
+                password: {type: GraphQLString}
+            },
+            async resolve(parent, args, ctx) {
+                return await authentication.adminLogin(args).then(login => {
+                    return login
+                })
+
             }
         },
     },
