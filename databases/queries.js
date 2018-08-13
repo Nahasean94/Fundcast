@@ -196,12 +196,9 @@ const queries = {
         })
     },
     storeProfilePicture: async function (path, uploader) {
-        return await new Upload({
-            caption: 'Profile Picture',
-            path: path,
-            uploader: uploader,
-            timestamp: new Date()
-        })
+        return await Person.findByIdAndUpdate(uploader, {
+            profile_picture: path,
+        }).exec()
     },
     addTagNotification: async function (podcast, subscriber) {
         Person.findOneAndUpdate({
@@ -402,6 +399,9 @@ const queries = {
     },
     newFaq: async function (faq) {
         return await new Faqs({question: faq.question, answer: faq.answer, timestamp: new Date()}).save()
+    },
+    findUserPodcasts: async function (id) {
+        return await Person.findById(id).exec()
     },
 }
 
